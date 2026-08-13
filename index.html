@@ -1,0 +1,1419 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Notas de Pedido — Tablero de Gestión — Griffouliere</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.1/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+<style>
+:root{
+  --rojo:#C00000;--negro:#1a1a1a;
+  --bg:#f4f5f7;--surface:#ffffff;--surface2:#f0efeb;--surface3:#e8e7e3;
+  --border:rgba(0,0,0,0.09);--border2:rgba(0,0,0,0.16);
+  --text:#1a1a1a;--text2:#6b7280;--text3:#99998f;
+  --green:#1D9E75;--green-bg:#E1F5EE;--green-text:#085041;
+  --amber:#EF9F27;--amber-bg:#FAEEDA;--amber-text:#633806;
+  --red:#C00000;--red-bg:#FCEBEB;--red-text:#7a0000;
+  --blue:#378ADD;--blue-bg:rgba(55,138,221,.1);--blue-text:#1a5f9e;
+  --purple:#534AB7;--purple-bg:rgba(83,74,183,.1);--purple-text:#2d2578;
+  --font:'Calibri','Segoe UI',system-ui,sans-serif;
+  --r:6px;--rl:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.5}
+
+/* ===== LOGIN ===== */
+#loginScreen{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center}
+.login-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:36px 40px;width:340px;max-width:90vw;box-shadow:0 8px 32px rgba(0,0,0,.12)}
+.login-logo{display:flex;align-items:center;gap:10px;margin-bottom:20px}
+.login-title{font-size:16px;font-weight:600;margin-bottom:6px}
+.login-sub{font-size:11px;color:var(--text3);margin-bottom:24px}
+.login-field{margin-bottom:14px}
+.login-field label{font-size:11px;color:var(--text2);display:block;margin-bottom:5px;font-weight:500}
+.login-field input{width:100%;font-size:14px;padding:9px 11px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2);color:var(--text);outline:none}
+.login-field input:focus{border-color:var(--blue)}
+.login-btn{width:100%;font-size:13px;padding:10px;border-radius:var(--r);border:none;background:var(--negro);color:#fff;cursor:pointer;font-weight:600;margin-top:6px;transition:opacity .15s;font-family:var(--font)}
+.login-btn:hover{opacity:.85}
+.login-error{font-size:12px;color:var(--red);margin-top:10px;text-align:center;min-height:16px}
+
+/* ===== HEADER ===== */
+.header{background:var(--negro);padding:0 16px;height:52px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:300;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.hleft{display:flex;align-items:center;gap:14px}
+.logo-badge{font-size:11px;font-weight:700;letter-spacing:3px;color:#fff;background:var(--rojo);padding:3px 9px;border-radius:2px;white-space:nowrap}
+.htitle{color:#fff;font-size:15px;font-weight:600;white-space:nowrap}
+.hsub{color:#999;font-size:11px}
+.user-bar{display:flex;align-items:center;gap:10px;color:#ccc;font-size:13px}
+.user-bar .uname{font-weight:600;color:#fff}
+.urole{font-size:9px;font-weight:700;letter-spacing:.6px;padding:2px 8px;border-radius:10px}
+.urole.PROPIETARIO{background:var(--rojo);color:#fff}
+.urole.ADMINISTRADOR{background:var(--blue);color:#fff}
+.urole.GESTION{background:rgba(255,255,255,.15);color:#ccc}
+.ulogout{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.25);font-size:12px;padding:6px 12px;border-radius:4px;cursor:pointer;font-family:var(--font)}
+.ulogout:hover{background:rgba(255,255,255,.22)}
+
+main.wide{max-width:1500px;margin:0 auto;padding:16px 20px 60px}
+
+button{cursor:pointer;font-family:inherit;font-size:13px;padding:9px 15px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface);color:var(--text)}
+button:hover{background:var(--surface2)}
+button.primary{background:var(--negro);color:#fff;border-color:var(--negro)}
+button.primary:hover{opacity:.85}
+button.btn-green{background:var(--green-bg);color:var(--green-text);border-color:var(--green)}
+button.btn-red{background:var(--red-bg);color:var(--red-text);border-color:var(--red)}
+
+.filters-bar{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:14px 16px;margin-bottom:14px}
+.ftitle{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.fi label{font-size:10px;color:var(--text2);display:block;margin-bottom:4px;font-weight:600}
+input,select,textarea{font-family:inherit;color:var(--text);outline:none}
+.fi input,.fi select{width:100%;padding:7px 9px;font-size:12px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2)}
+.fi input:focus,.fi select:focus{border-color:var(--blue)}
+.ffooter{display:flex;justify-content:space-between;align-items:center;margin-top:12px;flex-wrap:wrap;gap:8px}
+.fcount{font-size:11px;color:var(--text3)}
+.ebtns{display:flex;gap:8px;flex-wrap:wrap}
+.ebtns button{font-size:12px}
+
+/* MULTISELECT */
+.ms-wrapper{position:relative}
+.ms-trigger{width:100%;font-size:12px;padding:7px 26px 7px 9px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2);color:var(--text);cursor:pointer;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:32px;display:flex;align-items:center;justify-content:space-between}
+.ms-trigger:hover{border-color:var(--blue)}
+.ms-trigger.active{border-color:var(--blue);background:var(--blue-bg);color:var(--blue-text);font-weight:700}
+.ms-arrow{font-size:9px;color:var(--text3);flex-shrink:0;margin-left:4px}
+.ms-dropdown{display:none;position:absolute;top:calc(100% + 3px);left:0;right:0;background:var(--surface);border:1px solid var(--border2);border-radius:var(--r);z-index:200;max-height:260px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,.14);min-width:200px}
+.ms-dropdown.open{display:block}
+.ms-search{padding:6px 8px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface)}
+.ms-search input{width:100%;font-size:11px;padding:5px 7px;border-radius:5px;border:1px solid var(--border2);background:var(--surface2)}
+.ms-options{padding:4px 0}
+.ms-option{display:flex;align-items:center;gap:7px;padding:6px 10px;font-size:12px;cursor:pointer;color:var(--text)}
+.ms-option:hover{background:var(--surface2)}
+.ms-option input[type=checkbox]{accent-color:var(--blue);width:14px;height:14px;cursor:pointer;flex-shrink:0}
+.ms-option.sel{background:var(--blue-bg)}
+.ms-actions{display:flex;justify-content:space-between;padding:6px 8px;border-top:1px solid var(--border);position:sticky;bottom:0;background:var(--surface)}
+.ms-actions button{font-size:10px;padding:4px 9px}
+.ms-empty{padding:12px;text-align:center;font-size:11px;color:var(--text3)}
+.ms-trigger.cargando{cursor:wait;opacity:.6}
+
+/* TABS */
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:0;flex-wrap:wrap}
+.tab{font-size:13px;font-weight:600;padding:9px 16px;border-radius:var(--r) var(--r) 0 0;border:1px solid transparent;border-bottom:none;color:var(--text2);cursor:pointer;background:transparent;margin-bottom:-1px;transition:background .12s;display:flex;align-items:center;gap:6px}
+.tab:hover{color:var(--text);background:var(--surface2)}
+.tab.active{background:var(--surface);color:var(--text);border-color:var(--border);font-weight:700}
+.tcontent{display:none;padding-top:14px}
+.tcontent.active{display:block}
+
+.kpis{display:grid;grid-template-columns:repeat(7,1fr);gap:9px;margin-bottom:14px}
+@media(max-width:1200px){.kpis{grid-template-columns:repeat(4,1fr)}}
+@media(max-width:650px){.kpis{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:12px 14px}
+.kpi .lbl{font-size:10px;color:var(--text2);margin-bottom:4px}
+.kpi .val{font-size:22px;font-weight:700;line-height:1}
+.kpi.ok .val{color:var(--green)}.kpi.warn .val{color:var(--amber)}.kpi.danger .val{color:var(--red)}
+
+.pill{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap}
+.p-proceso{background:var(--amber-bg);color:var(--amber-text)}
+.p-cumplido{background:var(--green-bg);color:var(--green-text)}
+.p-rechazado{background:var(--red-bg);color:var(--red-text)}
+.p-pendiente{background:var(--blue-bg);color:var(--blue-text)}
+.p-otro{background:var(--surface3);color:var(--text2)}
+.p-urgente{background:var(--red-bg);color:var(--red-text)}
+.p-programado{background:var(--amber-bg);color:var(--amber-text)}
+.p-planificado{background:var(--blue-bg);color:var(--blue-text)}
+.p-total{background:var(--green-bg);color:var(--green-text)}
+.p-regular{background:var(--amber-bg);color:var(--amber-text)}
+.p-fueratermino{background:var(--red-bg);color:var(--red-text)}
+
+.tbl-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden}
+.twrap{display:none;overflow-x:auto;cursor:grab;scrollbar-width:thin;scrollbar-color:var(--border2) var(--surface2)}
+.twrap.dragging{cursor:grabbing;user-select:none}
+.twrap::-webkit-scrollbar{height:11px}
+.twrap::-webkit-scrollbar-track{background:var(--surface2)}
+.twrap::-webkit-scrollbar-thumb{background:var(--border2);border-radius:6px}
+.twrap::-webkit-scrollbar-thumb:hover{background:var(--text3)}
+table{width:100%;border-collapse:collapse;font-size:11px;table-layout:auto}
+th{text-align:left;padding:7px 8px;font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid var(--border);background:var(--surface2);white-space:nowrap}
+td{padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:middle}
+td.nowrap{white-space:nowrap}
+td.trunc{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:help}
+th:first-child,td:first-child{position:sticky;left:0;z-index:2;background:var(--surface);box-shadow:2px 0 5px rgba(0,0,0,.08)}
+th:first-child{background:var(--surface2);z-index:3}
+tbody tr:hover td{background:var(--surface2)}
+tbody tr:hover td:first-child{background:var(--surface2)}
+.empty{text-align:center;padding:30px;color:var(--text3);font-size:12px}
+.btn-edit{background:var(--blue-bg);color:var(--blue-text);border-color:var(--blue);font-size:10px;padding:3px 7px;white-space:nowrap}
+.np-cell{display:flex;align-items:center;gap:6px}
+.subline{font-size:10px;color:var(--text3);margin-top:2px}
+
+.pedidos-cards{display:flex;flex-direction:column;gap:8px}
+.ped-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px}
+.ped-card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:8px}
+.ped-np{font-size:13px;font-weight:700}
+.ped-art{font-size:13px;font-weight:600;margin-bottom:4px}
+.ped-meta{font-size:11px;color:var(--text3);display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px}
+.ped-bottom{display:flex;gap:6px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+
+@media(min-width:1000px){
+  .pedidos-cards{display:none}
+  .twrap{display:block}
+}
+
+.loading{text-align:center;padding:30px;color:var(--text3);font-size:12px}
+.spinner{width:22px;height:22px;border:3px solid var(--border2);border-top-color:var(--rojo);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 10px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--negro);color:#fff;padding:11px 20px;border-radius:var(--r);font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999;max-width:90vw;text-align:center}
+.toast.show{opacity:1}
+.toast.err{background:var(--red)}
+.toast.ok{background:var(--green)}
+
+/* MODAL DE EDICIÓN DE PEDIDO */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:600;align-items:center;justify-content:center;padding:16px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border-radius:var(--rl);padding:22px;width:520px;max-width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.2)}
+.modal-title{font-size:15px;font-weight:700;margin-bottom:2px;display:flex;align-items:center;gap:8px}
+.modal-sub{font-size:11px;color:var(--text3);margin-bottom:16px}
+.field{margin-bottom:12px}
+.field label{font-size:11px;color:var(--text2);display:block;margin-bottom:4px;font-weight:600}
+.field input,.field select,.field textarea{width:100%;font-size:14px;padding:9px 11px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface2)}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--blue);background:var(--surface)}
+.field textarea{min-height:56px;resize:vertical}
+.field.date-edit input{border-color:var(--blue)}
+.field .hint{font-size:10px;color:var(--text3);margin-top:4px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+.modal-info{background:var(--surface2);border-radius:var(--r);padding:10px 12px;margin-bottom:16px;font-size:11px;color:var(--text2);display:flex;flex-direction:column;gap:3px}
+
+/* GRÁFICOS */
+.chart-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.chart-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}
+@media(max-width:900px){.chart-grid-2,.chart-grid-3{grid-template-columns:1fr}}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:16px}
+.chart-card-title{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:12px}
+.chart-wrap{position:relative;height:300px}
+.chart-wrap-sm{position:relative;height:260px}
+
+/* LOG DE CAMBIOS */
+.log-table th{white-space:nowrap}
+.log-table td{white-space:nowrap}
+.log-old{color:var(--red-text);text-decoration:line-through;opacity:.7}
+.log-new{color:var(--green-text);font-weight:600}
+
+/* USUARIOS */
+.usr-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:10px;margin-bottom:14px}
+.usr-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.usr-card.inactivo{opacity:.5}
+.usr-card-header{display:flex;align-items:center;gap:10px}
+.usr-card-av{width:36px;height:36px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--text2);flex-shrink:0}
+.usr-card-info{flex:1;overflow:hidden}
+.usr-card-name{font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.usr-card-user{font-size:10px;color:var(--text3)}
+.usr-card-actions{display:flex;gap:6px}
+.usr-card-actions button{font-size:10px;padding:4px 9px}
+.usr-modal .field select{cursor:pointer}
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">
+      <span class="logo-badge">GRIFFOULIERE</span>
+    </div>
+    <div class="login-title">Notas de Pedido</div>
+    <div class="login-sub">Ingresá tu usuario y clave para entrar al tablero de gestión.</div>
+    <div class="login-field">
+      <label>Usuario</label>
+      <input type="text" id="loginUsuario" placeholder="ej: fcaneva" autocomplete="username">
+    </div>
+    <div class="login-field">
+      <label>Clave</label>
+      <input type="password" id="loginClave" placeholder="••••" autocomplete="current-password">
+    </div>
+    <button class="login-btn" onclick="hacerLogin()"><i class="ti ti-login"></i> Ingresar</button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+</div>
+
+<!-- ============ APP ============ -->
+<div id="appRoot" style="display:none">
+
+<div class="header">
+  <div class="hleft">
+    <span class="logo-badge">GRIFFOULIERE</span>
+    <span class="htitle">Notas de Pedido</span>
+    <span class="hsub">Tablero de gestión · mostrando 2026 en adelante</span>
+  </div>
+  <div class="user-bar">
+    <span class="uname" id="userNombre">—</span>
+    <span class="urole" id="userRol">—</span>
+    <button class="ulogout" onclick="cerrarSesion()"><i class="ti ti-logout"></i> Salir</button>
+  </div>
+</div>
+
+<main class="wide">
+
+  <div class="filters-bar">
+    <div class="ftitle"><i class="ti ti-filter"></i> Filtros</div>
+    <div class="fgrid">
+      <div class="fi">
+        <label>N° de Nota</label>
+        <input type="text" id="filNP" oninput="onFiltroTextoChange()" placeholder="Ej: 15676">
+      </div>
+      <div class="fi">
+        <label>Artículo</label>
+        <input type="text" id="filArt" oninput="onFiltroTextoChange()" placeholder="Buscar artículo">
+      </div>
+      <div class="fi">
+        <label>Destino</label>
+        <div class="ms-wrapper" id="ms-destino"></div>
+      </div>
+      <div class="fi">
+        <label>Centro de costo</label>
+        <div class="ms-wrapper" id="ms-centroCosto"></div>
+      </div>
+      <div class="fi">
+        <label>Genera (solicitante)</label>
+        <div class="ms-wrapper" id="ms-generador"></div>
+      </div>
+      <div class="fi">
+        <label>Responsable</label>
+        <div class="ms-wrapper" id="ms-responsable"></div>
+      </div>
+      <div class="fi">
+        <label>Estado</label>
+        <div class="ms-wrapper" id="ms-estado"></div>
+      </div>
+      <div class="fi">
+        <label>Tipo de pedido</label>
+        <div class="ms-wrapper" id="ms-tipo"></div>
+      </div>
+      <div class="fi">
+        <label>Cumplimiento</label>
+        <div class="ms-wrapper" id="ms-cumplimiento"></div>
+      </div>
+      <div class="fi">
+        <label>Desde (fecha pedido)</label>
+        <input type="date" id="filDesde" onchange="onFiltrosChange()">
+      </div>
+      <div class="fi">
+        <label>Hasta (fecha pedido)</label>
+        <input type="date" id="filHasta" onchange="onFiltrosChange()">
+      </div>
+    </div>
+    <div class="ffooter">
+      <span class="fcount" id="fcount">—</span>
+      <div class="ebtns">
+        <button onclick="limpiarFiltros()"><i class="ti ti-x"></i> Limpiar filtros</button>
+        <button onclick="exportarExcel()"><i class="ti ti-file-spreadsheet"></i> Excel</button>
+        <button onclick="exportarPDF()"><i class="ti ti-file-type-pdf"></i> PDF</button>
+        <button class="primary" onclick="cargarPedidos()"><i class="ti ti-refresh"></i> Actualizar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" id="tab-btn-articulos" onclick="goToTab('articulos')"><i class="ti ti-table"></i> Artículos</div>
+    <div class="tab" id="tab-btn-graficos" onclick="goToTab('graficos')"><i class="ti ti-chart-bar"></i> Gráficos</div>
+    <div class="tab" id="tab-btn-log" onclick="goToTab('log')" style="display:none"><i class="ti ti-history"></i> Log de cambios</div>
+    <div class="tab" id="tab-btn-usuarios" onclick="goToTab('usuarios')" style="display:none"><i class="ti ti-users"></i> Usuarios</div>
+  </div>
+
+  <!-- ===== TAB ARTÍCULOS ===== -->
+  <div class="tcontent active" id="tab-articulos">
+
+    <div id="modoVistaBar" style="margin-bottom:10px;font-size:11px;color:var(--text2);display:flex;align-items:center;gap:10px;flex-wrap:wrap"></div>
+
+    <div class="kpis">
+      <div class="kpi"><div class="lbl">1. Total NP</div><div class="val" id="kTotalNP">—</div></div>
+      <div class="kpi"><div class="lbl">2. Cant. ítems/artículos</div><div class="val" id="kItems">—</div></div>
+      <div class="kpi warn"><div class="lbl">3. Pendientes</div><div class="val" id="kPendientes">—</div></div>
+      <div class="kpi warn"><div class="lbl">4. En proceso</div><div class="val" id="kProceso">—</div></div>
+      <div class="kpi ok"><div class="lbl">5. Cumplidos</div><div class="val" id="kCumplido">—</div></div>
+      <div class="kpi ok"><div class="lbl">6. Cumplidos en depósito</div><div class="val" id="kCumplidoDeposito">—</div></div>
+      <div class="kpi danger"><div class="lbl">7. Urgentes pendientes</div><div class="val" id="kUrgente">—</div></div>
+    </div>
+
+    <div id="tableroContent">
+      <div class="loading"><div class="spinner"></div>Cargando pedidos…</div>
+    </div>
+
+  </div>
+
+  <!-- ===== TAB GRÁFICOS ===== -->
+  <div class="tcontent" id="tab-graficos">
+
+    <div class="chart-card" style="margin-bottom:14px">
+      <div class="chart-card-title">Evolución mensual de N° de Notas de Pedido</div>
+      <div class="chart-wrap"><canvas id="chart-evolucion"></canvas></div>
+    </div>
+
+    <div class="chart-grid-3">
+      <div class="chart-card">
+        <div class="chart-card-title">Tipo de pedido</div>
+        <div class="chart-wrap-sm"><canvas id="chart-tipo"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Estado</div>
+        <div class="chart-wrap-sm"><canvas id="chart-estado"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Cumplimiento</div>
+        <div class="chart-wrap-sm"><canvas id="chart-cumplimiento"></canvas></div>
+      </div>
+    </div>
+
+    <div class="chart-grid-2">
+      <div class="chart-card">
+        <div class="chart-card-title">Top 10 Centros de Costo con más pedidos</div>
+        <div class="chart-wrap"><canvas id="chart-cc"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Top 10 Artículos más pedidos</div>
+        <div class="chart-wrap"><canvas id="chart-articulos"></canvas></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===== TAB LOG DE CAMBIOS (solo ADMINISTRADOR / PROPIETARIO) ===== -->
+  <div class="tcontent" id="tab-log">
+    <div class="tbl-card">
+      <div style="padding:11px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:12px;font-weight:700">Log de cambios — últimos 500 registros</div>
+        <button onclick="cargarLog()"><i class="ti ti-refresh"></i> Actualizar</button>
+      </div>
+      <div id="logContent"><div class="loading"><div class="spinner"></div>Cargando log…</div></div>
+    </div>
+  </div>
+
+  <!-- ===== TAB USUARIOS (solo ADMINISTRADOR / PROPIETARIO) ===== -->
+  <div class="tcontent" id="tab-usuarios">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px">Usuarios del sistema</div>
+      <button class="primary" onclick="abrirModalUsuario()"><i class="ti ti-user-plus"></i> Nuevo usuario</button>
+    </div>
+    <div id="usuariosContent"><div class="loading"><div class="spinner"></div>Cargando usuarios…</div></div>
+  </div>
+
+</main>
+
+<!-- MODAL DE EDICIÓN DE PEDIDO -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-title"><i class="ti ti-edit"></i> Gestionar Nota de Pedido</div>
+    <div class="modal-sub" id="modalSub">—</div>
+
+    <div class="modal-info" id="modalInfo"></div>
+
+    <div class="field">
+      <label>Estado</label>
+      <select id="mEstado">
+        <option value="EN PROCESO">EN PROCESO</option>
+        <option value="PENDIENTE">PENDIENTE</option>
+        <option value="CUMPLIDO">CUMPLIDO</option>
+        <option value="CUMPLIDO EN DEPOSITO">CUMPLIDO EN DEPOSITO</option>
+        <option value="RECHAZADO">RECHAZADO</option>
+        <option value="PENDIENTE/REPROGRAMADO">PENDIENTE/REPROGRAMADO</option>
+      </select>
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label>Responsable</label>
+        <input type="text" id="mResponsable" list="lstResponsables" placeholder="Nombre y apellido">
+        <datalist id="lstResponsables"></datalist>
+      </div>
+      <div class="field date-edit">
+        <label>Fecha de cumplimiento</label>
+        <input type="date" id="mFechaCumplimiento">
+        <div class="hint">Al completarla, las columnas de cumplimiento se recalculan solas</div>
+      </div>
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label>PIM</label>
+        <input type="text" id="mPim">
+      </div>
+      <div class="field">
+        <label>Transferencia</label>
+        <input type="text" id="mTransferencia">
+      </div>
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label>Orden de compra</label>
+        <input type="text" id="mOrdenCompra">
+      </div>
+      <div class="field">
+        <label>Remito</label>
+        <input type="text" id="mRemito">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Observaciones de depósito</label>
+      <textarea id="mObsDeposito" placeholder="Notas internas de gestión"></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button onclick="cerrarModal()">Cancelar</button>
+      <button class="primary" id="btnGuardarModal" onclick="guardarEdicion()"><i class="ti ti-device-floppy"></i> Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DE USUARIO (crear/editar) -->
+<div class="modal-overlay" id="usrModalOverlay">
+  <div class="modal usr-modal">
+    <div class="modal-title" id="usrModalTitle"><i class="ti ti-user-plus"></i> Nuevo usuario</div>
+    <div class="modal-sub">El usuario (login) se genera solo a partir del nombre, pero lo podés cambiar.</div>
+
+    <div class="field">
+      <label>Nombre completo</label>
+      <input type="text" id="uNombre" placeholder="Ej: PEREZ JUAN" oninput="sugerirUsuario()">
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>Usuario (login)</label>
+        <input type="text" id="uUsuario" placeholder="se genera solo">
+      </div>
+      <div class="field">
+        <label>Rol</label>
+        <select id="uRol">
+          <option value="GESTION">GESTION</option>
+          <option value="ADMINISTRADOR">ADMINISTRADOR</option>
+          <option value="PROPIETARIO">PROPIETARIO</option>
+        </select>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>Clave</label>
+        <input type="text" id="uClave" placeholder="1234">
+      </div>
+      <div class="field">
+        <label>Estado</label>
+        <select id="uActivo">
+          <option value="true">Activo</option>
+          <option value="false">Inactivo</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button onclick="cerrarModalUsuario()">Cancelar</button>
+      <button class="primary" id="btnGuardarUsuario" onclick="guardarUsuario()"><i class="ti ti-device-floppy"></i> Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+</div><!-- /appRoot -->
+
+<script>
+/*******************************************************
+ * CONFIGURACIÓN
+ *******************************************************/
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwJwMxN9_m8ZrPRSZeCMGhETF3y5nu3ezPko1Q_q0vK3YcMeKaUOC3Dse85OyiJ3-C-/exec';
+
+const PALETTE = ['#C00000','#1D9E75','#EF9F27','#378ADD','#534AB7','#E07B39','#888780','#7a0000','#0F766E','#9E5AC7'];
+
+let pedidosCache = [];
+let usuariosCache = [];
+let filaEnEdicion = null;
+let usuarioEnEdicion = null;
+let vistaActual = 'articulos';
+let charts = {};
+let currentUser = null;
+const PAGE_SIZE = 1000;
+let filasVisibles = PAGE_SIZE;
+
+const MS_KEYS = ['destino', 'centroCosto', 'generador', 'responsable', 'estado', 'tipo', 'cumplimiento'];
+const MS_CAMPO = { destino: 'destino', centroCosto: 'centroCosto', generador: 'generador', responsable: 'responsable', estado: 'estado', tipo: 'tipoPedido', cumplimiento: 'cumplimiento' };
+let msState = {};
+let msOpciones = {};
+MS_KEYS.forEach(k => { msState[k] = new Set(); msOpciones[k] = []; });
+
+if (window.ChartDataLabels) Chart.register(ChartDataLabels);
+Chart.defaults.font.family = "Calibri, 'Segoe UI', system-ui, sans-serif";
+
+/*******************************************************
+ * API
+ *******************************************************/
+async function apiGet(params) {
+  const url = APPS_SCRIPT_URL + '?' + new URLSearchParams(params).toString();
+  const res = await fetch(url);
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error || 'Error desconocido');
+  return data;
+}
+
+function mostrarToast(msg, tipo) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (tipo ? ' ' + tipo : '');
+  setTimeout(() => { t.className = 'toast'; }, 3200);
+}
+
+/*******************************************************
+ * LOGIN / SESIÓN
+ *******************************************************/
+function iniciarApp() {
+  const guardado = sessionStorage.getItem('np_usuario');
+  if (guardado) {
+    try {
+      currentUser = JSON.parse(guardado);
+      mostrarApp();
+      return;
+    } catch (e) { /* sigue a mostrar login */ }
+  }
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('appRoot').style.display = 'none';
+  document.getElementById('loginUsuario').focus();
+}
+
+async function hacerLogin() {
+  const usuario = document.getElementById('loginUsuario').value.trim();
+  const clave = document.getElementById('loginClave').value;
+  const errBox = document.getElementById('loginError');
+  errBox.textContent = '';
+  if (!usuario || !clave) { errBox.textContent = 'Completá usuario y clave'; return; }
+
+  try {
+    const data = await apiGet({ action: 'login', usuario, clave });
+    currentUser = data.usuario;
+    sessionStorage.setItem('np_usuario', JSON.stringify(currentUser));
+    mostrarApp();
+  } catch (err) {
+    errBox.textContent = err.message;
+  }
+}
+
+document.getElementById('loginClave').addEventListener('keydown', (e) => { if (e.key === 'Enter') hacerLogin(); });
+document.getElementById('loginUsuario').addEventListener('keydown', (e) => { if (e.key === 'Enter') document.getElementById('loginClave').focus(); });
+
+function cerrarSesion() {
+  sessionStorage.removeItem('np_usuario');
+  location.reload();
+}
+
+function mostrarApp() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appRoot').style.display = 'block';
+  document.getElementById('userNombre').textContent = currentUser.nombre;
+  const rolEl = document.getElementById('userRol');
+  rolEl.textContent = currentUser.rol;
+  rolEl.className = 'urole ' + currentUser.rol;
+
+  const esAdmin = currentUser.rol === 'ADMINISTRADOR' || currentUser.rol === 'PROPIETARIO';
+  document.getElementById('tab-btn-log').style.display = esAdmin ? 'flex' : 'none';
+  document.getElementById('tab-btn-usuarios').style.display = esAdmin ? 'flex' : 'none';
+
+  cargarPedidos();
+}
+
+// Se llama apenas se entra a la app, antes de que respondan los pedidos,
+// para que los filtros de selección múltiple no se vean vacíos/rotos.
+function mostrarPlaceholdersFiltros() {
+  MS_KEYS.forEach(key => {
+    document.getElementById('ms-' + key).innerHTML = '<div class="ms-trigger cargando">Cargando…</div>';
+  });
+}
+
+/*******************************************************
+ * TABS
+ *******************************************************/
+function goToTab(id) {
+  const esAdmin = currentUser && (currentUser.rol === 'ADMINISTRADOR' || currentUser.rol === 'PROPIETARIO');
+  if ((id === 'log' || id === 'usuarios') && !esAdmin) return;
+
+  vistaActual = id;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tcontent').forEach(v => v.classList.remove('active'));
+  document.getElementById('tab-btn-' + id).classList.add('active');
+  document.getElementById('tab-' + id).classList.add('active');
+
+  if (id === 'graficos') renderGraficos(pedidosFiltrados());
+  if (id === 'log') cargarLog();
+  if (id === 'usuarios') cargarUsuarios();
+}
+
+/*******************************************************
+ * CARGA DE DATOS — PEDIDOS
+ *******************************************************/
+async function cargarPedidos() {
+  document.getElementById('tableroContent').innerHTML = '<div class="loading"><div class="spinner"></div>Cargando pedidos…</div>';
+  mostrarPlaceholdersFiltros();
+  try {
+    const data = await apiGet({ action: 'getPedidosCompletos', anioDesde: '2026' });
+    pedidosCache = data.pedidos;
+    poblarFiltrosDinamicos();
+    onFiltrosChange();
+  } catch (err) {
+    document.getElementById('tableroContent').innerHTML = '<div class="empty">Error al cargar: ' + escapeHtml(err.message) + '</div>';
+  }
+}
+
+function poblarFiltrosDinamicos() {
+  MS_KEYS.forEach(key => {
+    const campo = MS_CAMPO[key];
+    const valores = pedidosCache.map(p => {
+      const v = p[campo];
+      if (v) return v;
+      return (key === 'estado') ? 'SIN ESTADO' : (key === 'cumplimiento' ? 'SIN DATO' : null);
+    }).filter(v => v !== null && v !== undefined);
+    const unicos = [...new Set(valores)].sort();
+    poblarMultiselect(key, unicos);
+  });
+  document.getElementById('lstResponsables').innerHTML =
+    [...new Set(pedidosCache.map(p => p.responsable).filter(Boolean))].sort().map(v => `<option value="${escapeHtml(v)}">`).join('');
+}
+
+/*******************************************************
+ * COMPONENTE MULTISELECT (filtros de selección múltiple)
+ *******************************************************/
+function poblarMultiselect(key, opciones) {
+  msOpciones[key] = opciones;
+  msState[key] = new Set([...msState[key]].filter(v => opciones.includes(v)));
+
+  const cont = document.getElementById('ms-' + key);
+  if (!cont.dataset.init) {
+    cont.dataset.init = '1';
+    cont.innerHTML = `
+      <div class="ms-trigger" onclick="toggleMs('${key}')" id="mstrigger-${key}">
+        <span id="mstext-${key}">Todos</span>
+        <span class="ms-arrow">▾</span>
+      </div>
+      <div class="ms-dropdown" id="msdrop-${key}">
+        <div class="ms-search"><input type="text" placeholder="Buscar..." oninput="filtrarOpcionesMs('${key}', this.value)"></div>
+        <div class="ms-options" id="msopts-${key}"></div>
+        <div class="ms-actions">
+          <button type="button" onclick="msSeleccionarTodos('${key}')">Seleccionar todos</button>
+          <button type="button" onclick="msLimpiar('${key}')">Limpiar</button>
+        </div>
+      </div>
+    `;
+  }
+  renderMsOptions(key, opciones);
+  actualizarMsTexto(key);
+}
+
+function renderMsOptions(key, opciones) {
+  const cont = document.getElementById('msopts-' + key);
+  if (!opciones.length) {
+    cont.innerHTML = '<div class="ms-empty">Sin opciones</div>';
+    return;
+  }
+  cont.innerHTML = opciones.map(v => `
+    <label class="ms-option ${msState[key].has(v) ? 'sel' : ''}">
+      <input type="checkbox" ${msState[key].has(v) ? 'checked' : ''} onchange="msToggleValue('${key}', this)">
+      <span>${escapeHtml(v)}</span>
+    </label>
+  `).join('');
+  const inputs = cont.querySelectorAll('input[type=checkbox]');
+  inputs.forEach((inp, i) => { inp.dataset.valor = opciones[i]; });
+}
+
+function msToggleValue(key, checkboxEl) {
+  const valor = checkboxEl.dataset.valor;
+  if (checkboxEl.checked) msState[key].add(valor); else msState[key].delete(valor);
+  checkboxEl.closest('.ms-option').classList.toggle('sel', checkboxEl.checked);
+  actualizarMsTexto(key);
+  onFiltrosChange();
+}
+
+function msSeleccionarTodos(key) {
+  msOpciones[key].forEach(v => msState[key].add(v));
+  renderMsOptions(key, msOpciones[key]);
+  actualizarMsTexto(key);
+  onFiltrosChange();
+}
+
+function msLimpiar(key) {
+  msState[key].clear();
+  renderMsOptions(key, msOpciones[key]);
+  actualizarMsTexto(key);
+  onFiltrosChange();
+}
+
+function actualizarMsTexto(key) {
+  const n = msState[key].size;
+  document.getElementById('mstext-' + key).textContent = n === 0 ? 'Todos' : n + ' seleccionado' + (n > 1 ? 's' : '');
+  document.getElementById('mstrigger-' + key).classList.toggle('active', n > 0);
+}
+
+function toggleMs(key) {
+  const estaAbierto = document.getElementById('msdrop-' + key).classList.contains('open');
+  document.querySelectorAll('.ms-dropdown.open').forEach(d => d.classList.remove('open'));
+  if (!estaAbierto) document.getElementById('msdrop-' + key).classList.add('open');
+}
+
+function filtrarOpcionesMs(key, texto) {
+  const t = texto.trim().toLowerCase();
+  const filtradas = msOpciones[key].filter(v => v.toLowerCase().includes(t));
+  renderMsOptions(key, filtradas);
+}
+
+document.addEventListener('click', (ev) => {
+  if (!ev.target.closest('.ms-wrapper')) {
+    document.querySelectorAll('.ms-dropdown.open').forEach(d => d.classList.remove('open'));
+  }
+});
+
+/*******************************************************
+ * FILTROS (compartidos entre pestañas)
+ *******************************************************/
+function pedidosFiltrados() {
+  const np = document.getElementById('filNP').value.trim().toLowerCase();
+  const art = document.getElementById('filArt').value.trim().toLowerCase();
+  const desde = document.getElementById('filDesde').value;
+  const hasta = document.getElementById('filHasta').value;
+
+  return pedidosCache.filter(p => {
+    if (np && !String(p.np).toLowerCase().includes(np)) return false;
+    if (art && !String(p.articulo || '').toLowerCase().includes(art)) return false;
+
+    for (const key of MS_KEYS) {
+      if (!msState[key].size) continue;
+      const campo = MS_CAMPO[key];
+      let valor = p[campo];
+      if (!valor) valor = (key === 'estado') ? 'SIN ESTADO' : (key === 'cumplimiento' ? 'SIN DATO' : '');
+      if (!msState[key].has(valor)) return false;
+    }
+
+    if (desde || hasta) {
+      const f = parseFechaDDMMYYYY(p.fechaPedido);
+      if (!f) return false;
+      if (desde && f < new Date(desde + 'T00:00:00')) return false;
+      if (hasta && f > new Date(hasta + 'T23:59:59')) return false;
+    }
+    return true;
+  });
+}
+
+function parseFechaDDMMYYYY(str) {
+  if (!str) return null;
+  const partes = str.split('/');
+  if (partes.length !== 3) return null;
+  return new Date(partes[2], partes[1] - 1, partes[0]);
+}
+
+function limpiarFiltros() {
+  ['filNP','filArt','filDesde','filHasta'].forEach(id => { document.getElementById(id).value = ''; });
+  MS_KEYS.forEach(key => {
+    msState[key].clear();
+    renderMsOptions(key, msOpciones[key]);
+    actualizarMsTexto(key);
+  });
+  onFiltrosChange();
+}
+
+function onFiltrosChange() {
+  filasVisibles = PAGE_SIZE;
+  const filtrados = pedidosFiltrados();
+  renderTablero(filtrados);
+  if (vistaActual === 'graficos') renderGraficos(filtrados);
+}
+
+let debounceTimer = null;
+function onFiltroTextoChange() {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(onFiltrosChange, 300);
+}
+
+/*******************************************************
+ * ESTADOS AUXILIARES
+ *******************************************************/
+function esPendiente(estado) {
+  const e = (estado || '').toUpperCase();
+  return e === '' || e.indexOf('PENDIENTE') === 0;
+}
+function esUrgentePendiente(p) {
+  const e = (p.estado || '').toUpperCase();
+  const yaResuelto = e.indexOf('CUMPLIDO') === 0 || e === 'RECHAZADO';
+  return p.tipoPedido === 'URGENTE' && !yaResuelto;
+}
+
+function claseEstado(estado) {
+  if (!estado) return 'p-otro';
+  const e = estado.toUpperCase();
+  if (e.indexOf('CUMPLIDO') === 0) return 'p-cumplido';
+  if (e === 'RECHAZADO') return 'p-rechazado';
+  if (e === 'EN PROCESO') return 'p-proceso';
+  if (e.indexOf('PENDIENTE') === 0) return 'p-pendiente';
+  return 'p-otro';
+}
+function claseTipo(tipo) {
+  if (tipo === 'URGENTE') return 'p-urgente';
+  if (tipo === 'PROGRAMADO') return 'p-programado';
+  if (tipo === 'PLANIFICADO') return 'p-planificado';
+  return 'p-otro';
+}
+function claseCumplimiento(c) {
+  if (!c) return 'p-otro';
+  if (c === 'CUMPLE TOTAL') return 'p-total';
+  if (c === 'CUMPLE REGULAR') return 'p-regular';
+  if (c.indexOf('FUERA DE') >= 0) return 'p-fueratermino';
+  return 'p-otro';
+}
+
+/*******************************************************
+ * RENDER — TAB ARTÍCULOS (KPIs + tabla)
+ *******************************************************/
+function renderTablero(filtrados) {
+  document.getElementById('fcount').textContent = filtrados.length + ' de ' + pedidosCache.length + ' registros';
+
+  document.getElementById('kTotalNP').textContent = new Set(filtrados.map(p => p.np)).size;
+  document.getElementById('kItems').textContent = filtrados.length;
+  document.getElementById('kPendientes').textContent = filtrados.filter(p => esPendiente(p.estado)).length;
+  document.getElementById('kProceso').textContent = filtrados.filter(p => p.estado === 'EN PROCESO').length;
+  document.getElementById('kCumplido').textContent = filtrados.filter(p => p.estado === 'CUMPLIDO').length;
+  document.getElementById('kCumplidoDeposito').textContent = filtrados.filter(p => p.estado === 'CUMPLIDO EN DEPOSITO').length;
+  document.getElementById('kUrgente').textContent = filtrados.filter(esUrgentePendiente).length;
+
+  const cont = document.getElementById('tableroContent');
+  if (!filtrados.length) {
+    cont.innerHTML = '<div class="tbl-card"><div class="empty">No hay pedidos que coincidan con los filtros</div></div>';
+    return;
+  }
+
+  const visibles = filtrados.slice(0, filasVisibles);
+  const quedan = filtrados.length - visibles.length;
+
+  const filasHtml = visibles.map(p => `
+    <tr>
+      <td class="nowrap"><div class="np-cell"><strong>${escapeHtml(String(p.np))}</strong><button class="btn-edit" onclick="abrirModal(${p.fila})"><i class="ti ti-edit"></i> Gestionar</button></div></td>
+      <td class="nowrap">${escapeHtml(p.fechaPedido)}</td>
+      <td style="white-space:normal;max-width:260px">${escapeHtml(p.articulo || '')}</td>
+      <td class="nowrap" style="text-align:center">${escapeHtml(String(p.cantidad || ''))}</td>
+      <td class="trunc" style="max-width:100px" title="${escapeHtml(p.destino || '')}">${escapeHtml(p.destino || '')}</td>
+      <td style="white-space:normal;max-width:220px">${escapeHtml(p.centroCosto || '')}</td>
+      <td class="trunc" style="max-width:130px" title="${escapeHtml(p.generador || '')}">${escapeHtml(p.generador || '')}</td>
+      <td class="nowrap"><span class="pill ${claseTipo(p.tipoPedido)}">${escapeHtml(p.tipoPedido || '—')}</span></td>
+      <td class="nowrap"><span class="pill ${claseEstado(p.estado)}">${escapeHtml(p.estado || 'SIN ESTADO')}</span></td>
+      <td class="trunc" style="max-width:120px" title="${escapeHtml(p.responsable || '')}">${escapeHtml(p.responsable || '—')}</td>
+      <td class="nowrap">PIM: ${escapeHtml(p.pim || '—')}<div class="subline">Transf: ${escapeHtml(p.transferencia || '—')}</div></td>
+      <td class="nowrap">${escapeHtml(p.fechaNecesidad || '—')}</td>
+      <td class="nowrap">${escapeHtml(p.fechaCumplimiento || '—')}<div class="subline"><span class="pill ${claseCumplimiento(p.cumplimiento)}">${escapeHtml(p.cumplimiento || '—')}</span></div></td>
+    </tr>
+  `).join('');
+
+  const cardsHtml = visibles.map(p => `
+    <div class="ped-card">
+      <div class="ped-card-top">
+        <div class="np-cell"><span class="ped-np">N° ${escapeHtml(String(p.np))}</span><button class="btn-edit" onclick="abrirModal(${p.fila})"><i class="ti ti-edit"></i> Gestionar</button></div>
+        <span class="pill ${claseEstado(p.estado)}">${escapeHtml(p.estado || 'SIN ESTADO')}</span>
+      </div>
+      <div class="ped-art">${escapeHtml(p.articulo || '')} ${p.cantidad ? '(x' + escapeHtml(String(p.cantidad)) + ')' : ''}</div>
+      <div class="ped-meta">
+        <span><i class="ti ti-calendar"></i> ${escapeHtml(p.fechaPedido)}</span>
+        <span><i class="ti ti-map-pin"></i> ${escapeHtml(p.destino || '')}</span>
+        <span><i class="ti ti-user"></i> ${escapeHtml(p.generador || '')}</span>
+        <span><i class="ti ti-file-text"></i> PIM: ${escapeHtml(p.pim || '—')} · Transf: ${escapeHtml(p.transferencia || '—')}</span>
+        <span><i class="ti ti-calendar-due"></i> F. Necesidad: ${escapeHtml(p.fechaNecesidad || '—')}</span>
+      </div>
+      <div class="ped-bottom">
+        <span class="pill ${claseTipo(p.tipoPedido)}">${escapeHtml(p.tipoPedido || '—')}</span>
+        <span class="pill ${claseCumplimiento(p.cumplimiento)}">${escapeHtml(p.cumplimiento || 'Sin cumplimiento')}</span>
+      </div>
+    </div>
+  `).join('');
+
+  cont.innerHTML = `
+    <div class="tbl-card">
+      <div class="twrap" id="twrapTabla">
+        <table>
+          <thead><tr>
+            <th>N° NP</th><th>Fecha</th><th>Artículo</th><th>Cant.</th><th>Destino</th>
+            <th>Centro costo</th><th>Solicitante</th><th>Tipo</th><th>Estado</th>
+            <th>Responsable</th><th>PIM / Transf.</th><th>F. Necesidad</th><th>F. Cumplim. / Cumplimiento</th>
+          </tr></thead>
+          <tbody>${filasHtml}</tbody>
+        </table>
+      </div>
+      ${quedan > 0 ? `<div style="padding:12px;text-align:center;border-top:1px solid var(--border)"><button class="primary" onclick="verMasFilas()">Cargar ${Math.min(quedan, PAGE_SIZE)} más (quedan ${quedan})</button></div>` : ''}
+    </div>
+    <div class="pedidos-cards">${cardsHtml}</div>
+    ${quedan > 0 ? `<div style="padding:12px;text-align:center"><button class="primary" onclick="verMasFilas()">Cargar ${Math.min(quedan, PAGE_SIZE)} más (quedan ${quedan})</button></div>` : ''}
+  `;
+
+  habilitarDragScroll(document.getElementById('twrapTabla'));
+}
+
+function verMasFilas() {
+  filasVisibles += PAGE_SIZE;
+  renderTablero(pedidosFiltrados());
+}
+
+const dragState = { activo: false, wrap: null, startX: 0, startScroll: 0 };
+window.addEventListener('mousemove', (e) => {
+  if (!dragState.activo || !dragState.wrap) return;
+  e.preventDefault();
+  dragState.wrap.scrollLeft = dragState.startScroll - (e.pageX - dragState.startX);
+});
+window.addEventListener('mouseup', () => {
+  if (dragState.wrap) dragState.wrap.classList.remove('dragging');
+  dragState.activo = false;
+  dragState.wrap = null;
+});
+
+function habilitarDragScroll(wrap) {
+  if (!wrap) return;
+  wrap.addEventListener('mousedown', (e) => {
+    dragState.activo = true;
+    dragState.wrap = wrap;
+    dragState.startX = e.pageX;
+    dragState.startScroll = wrap.scrollLeft;
+    wrap.classList.add('dragging');
+  });
+}
+
+/*******************************************************
+ * RENDER — TAB GRÁFICOS
+ *******************************************************/
+function contarPor(arr, campo) {
+  const map = {};
+  arr.forEach(p => {
+    const k = p[campo] || 'SIN DATO';
+    map[k] = (map[k] || 0) + 1;
+  });
+  return map;
+}
+
+function destruirChart(id) {
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+}
+
+function labelPorcentaje(value, ctx) {
+  const total = ctx.chart.data.datasets[ctx.datasetIndex].data.reduce((a, b) => a + b, 0);
+  if (!total) return '';
+  const pct = value / total * 100;
+  return pct < 4 ? '' : pct.toFixed(0) + '%';
+}
+
+function mkDonut(canvasId, dataMap) {
+  destruirChart(canvasId);
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+  const labels = Object.keys(dataMap);
+  const data = Object.values(dataMap);
+  if (!data.length) return;
+  charts[canvasId] = new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data, backgroundColor: labels.map((_, i) => PALETTE[i % PALETTE.length]), borderWidth: 0 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 10, padding: 8 } },
+        tooltip: { callbacks: { label: (c) => {
+          const total = c.dataset.data.reduce((a, b) => a + b, 0);
+          return ` ${c.label}: ${c.parsed} (${total ? Math.round(c.parsed / total * 100) : 0}%)`;
+        } } },
+        datalabels: { color: '#fff', font: { size: 11, weight: 'bold' }, formatter: labelPorcentaje }
+      }
+    }
+  });
+}
+
+function mkBarTop10(canvasId, dataMap, totalReferencia) {
+  destruirChart(canvasId);
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+  const entradas = Object.entries(dataMap).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  if (!entradas.length) return;
+  const labels = entradas.map(e => e[0].length > 28 ? e[0].slice(0, 28) + '…' : e[0]);
+  const data = entradas.map(e => e[1]);
+  charts[canvasId] = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [{ data, backgroundColor: '#C00000', borderRadius: 3 }] },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: (c) => ` ${c.parsed.x} (${totalReferencia ? Math.round(c.parsed.x / totalReferencia * 100) : 0}%)` } },
+        datalabels: {
+          color: '#1a1a1a', anchor: 'end', align: 'end', font: { size: 10, weight: 'bold' },
+          formatter: (value) => value + (totalReferencia ? ' (' + Math.round(value / totalReferencia * 100) + '%)' : '')
+        }
+      },
+      scales: { x: { beginAtZero: true, ticks: { font: { size: 10 } } }, y: { ticks: { font: { size: 10 } } } }
+    }
+  });
+}
+
+function mkEvolucionMensual(canvasId, filtrados) {
+  destruirChart(canvasId);
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+
+  const porMes = {};
+  filtrados.forEach(p => {
+    const f = parseFechaDDMMYYYY(p.fechaPedido);
+    if (!f) return;
+    const key = f.getFullYear() + '-' + String(f.getMonth() + 1).padStart(2, '0');
+    if (!porMes[key]) porMes[key] = new Set();
+    porMes[key].add(p.np);
+  });
+
+  const keysOrdenadas = Object.keys(porMes).sort();
+  if (!keysOrdenadas.length) return;
+
+  const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const labels = keysOrdenadas.map(k => {
+    const [anio, mes] = k.split('-');
+    return MESES[parseInt(mes, 10) - 1] + ' ' + anio;
+  });
+  const data = keysOrdenadas.map(k => porMes[k].size);
+
+  charts[canvasId] = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [{ label: 'N° de Notas de Pedido', data, backgroundColor: '#378ADD', borderRadius: 4 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: (c) => ` ${c.parsed.y} notas` } },
+        datalabels: { color: '#1a1a1a', anchor: 'end', align: 'end', font: { size: 10, weight: 'bold' }, formatter: (v) => v }
+      },
+      scales: {
+        x: { ticks: { font: { size: 10 } }, grid: { display: false } },
+        y: { beginAtZero: true, ticks: { font: { size: 10 }, precision: 0 } }
+      }
+    }
+  });
+}
+
+function renderGraficos(filtrados) {
+  if (!filtrados.length) {
+    ['chart-evolucion','chart-tipo','chart-estado','chart-cumplimiento','chart-cc','chart-articulos'].forEach(destruirChart);
+    return;
+  }
+
+  mkEvolucionMensual('chart-evolucion', filtrados);
+  mkDonut('chart-tipo', contarPor(filtrados, 'tipoPedido'));
+  mkDonut('chart-estado', contarPor(filtrados.map(p => ({ estado: p.estado || 'SIN ESTADO' })), 'estado'));
+
+  const conCumplimiento = filtrados.filter(p => p.cumplimiento);
+  if (conCumplimiento.length) {
+    mkDonut('chart-cumplimiento', contarPor(conCumplimiento, 'cumplimiento'));
+  } else {
+    destruirChart('chart-cumplimiento');
+  }
+
+  mkBarTop10('chart-cc', contarPor(filtrados, 'centroCosto'), filtrados.length);
+  mkBarTop10('chart-articulos', contarPor(filtrados, 'articulo'), filtrados.length);
+}
+
+/*******************************************************
+ * MODAL DE EDICIÓN DE PEDIDO (columnas L → S)
+ *******************************************************/
+function abrirModal(fila) {
+  const p = pedidosCache.find(x => x.fila === fila);
+  if (!p) return;
+  filaEnEdicion = p;
+
+  document.getElementById('modalSub').textContent = 'N° ' + p.np + ' · ' + (p.articulo || '');
+  document.getElementById('modalInfo').innerHTML = `
+    <span><strong>Destino:</strong> ${escapeHtml(p.destino || '—')}</span>
+    <span><strong>Centro de costo:</strong> ${escapeHtml(p.centroCosto || '—')}</span>
+    <span><strong>Solicitante:</strong> ${escapeHtml(p.generador || '—')} · <strong>F. necesidad:</strong> ${escapeHtml(p.fechaNecesidad || '—')}</span>
+  `;
+
+  document.getElementById('mEstado').value = p.estado || 'EN PROCESO';
+  document.getElementById('mResponsable').value = p.responsable || '';
+  document.getElementById('mFechaCumplimiento').value = p.fechaCumplimientoISO || '';
+  document.getElementById('mPim').value = p.pim || '';
+  document.getElementById('mTransferencia').value = p.transferencia || '';
+  document.getElementById('mOrdenCompra').value = p.ordenCompra || '';
+  document.getElementById('mRemito').value = p.remito || '';
+  document.getElementById('mObsDeposito').value = p.obsDeposito || '';
+
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function cerrarModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+  filaEnEdicion = null;
+}
+
+async function guardarEdicion() {
+  if (!filaEnEdicion) return;
+  const btn = document.getElementById('btnGuardarModal');
+  btn.disabled = true;
+  btn.textContent = 'Guardando…';
+
+  try {
+    const data = await apiGet({
+      action: 'actualizarPedido',
+      fila: filaEnEdicion.fila,
+      np: filaEnEdicion.np,
+      estado: document.getElementById('mEstado').value,
+      responsable: document.getElementById('mResponsable').value.trim(),
+      fechaCumplimiento: document.getElementById('mFechaCumplimiento').value,
+      pim: document.getElementById('mPim').value.trim(),
+      transferencia: document.getElementById('mTransferencia').value.trim(),
+      ordenCompra: document.getElementById('mOrdenCompra').value.trim(),
+      remito: document.getElementById('mRemito').value.trim(),
+      obsDeposito: document.getElementById('mObsDeposito').value.trim(),
+      usuario: currentUser.usuario,
+      nombreUsuario: currentUser.nombre
+    });
+
+    const idx = pedidosCache.findIndex(x => x.fila === filaEnEdicion.fila);
+    if (idx >= 0) pedidosCache[idx] = data.pedido;
+
+    mostrarToast('Nota N° ' + data.pedido.np + ' actualizada', 'ok');
+    cerrarModal();
+    poblarFiltrosDinamicos();
+    onFiltrosChange();
+  } catch (err) {
+    mostrarToast('Error al guardar: ' + err.message, 'err');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ti ti-device-floppy"></i> Guardar cambios';
+  }
+}
+
+document.getElementById('modalOverlay').addEventListener('click', (ev) => {
+  if (ev.target.id === 'modalOverlay') cerrarModal();
+});
+
+/*******************************************************
+ * TAB LOG DE CAMBIOS
+ *******************************************************/
+async function cargarLog() {
+  const cont = document.getElementById('logContent');
+  cont.innerHTML = '<div class="loading"><div class="spinner"></div>Cargando log…</div>';
+  try {
+    const data = await apiGet({ action: 'getLog' });
+    if (!data.log.length) {
+      cont.innerHTML = '<div class="empty">Todavía no hay cambios registrados</div>';
+      return;
+    }
+    cont.innerHTML = `
+      <div class="twrap" style="display:block">
+        <table class="log-table">
+          <thead><tr>
+            <th>Fecha/Hora</th><th>Usuario</th><th>Nombre</th><th>N° NP</th><th>Campo</th><th>Anterior</th><th>Nuevo</th>
+          </tr></thead>
+          <tbody>
+            ${data.log.map(l => `
+              <tr>
+                <td>${escapeHtml(l.fechaHora)}</td>
+                <td><strong>${escapeHtml(l.usuario)}</strong></td>
+                <td>${escapeHtml(l.nombre)}</td>
+                <td>${escapeHtml(String(l.np))}</td>
+                <td>${escapeHtml(l.campo)}</td>
+                <td class="log-old">${escapeHtml(l.anterior || '—')}</td>
+                <td class="log-new">${escapeHtml(l.nuevo || '—')}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  } catch (err) {
+    cont.innerHTML = '<div class="empty">Error al cargar el log: ' + escapeHtml(err.message) + '</div>';
+  }
+}
+
+/*******************************************************
+ * TAB USUARIOS
+ *******************************************************/
+async function cargarUsuarios() {
+  const cont = document.getElementById('usuariosContent');
+  cont.innerHTML = '<div class="loading"><div class="spinner"></div>Cargando usuarios…</div>';
+  try {
+    const data = await apiGet({ action: 'getUsuarios' });
+    usuariosCache = data.usuarios;
+    renderUsuarios();
+  } catch (err) {
+    cont.innerHTML = '<div class="empty">Error al cargar usuarios: ' + escapeHtml(err.message) + '</div>';
+  }
+}
+
+function renderUsuarios() {
+  const cont = document.getElementById('usuariosContent');
+  if (!usuariosCache.length) {
+    cont.innerHTML = '<div class="empty">No hay usuarios cargados todavía</div>';
+    return;
+  }
+  cont.innerHTML = `<div class="usr-grid">${usuariosCache.map((u, idx) => `
+    <div class="usr-card ${u.activo ? '' : 'inactivo'}">
+      <div class="usr-card-header">
+        <div class="usr-card-av">${escapeHtml(iniciales(u.nombre))}</div>
+        <div class="usr-card-info">
+          <div class="usr-card-name">${escapeHtml(u.nombre)}</div>
+          <div class="usr-card-user">@${escapeHtml(u.usuario)} ${u.activo ? '' : '· INACTIVO'}</div>
+        </div>
+        <span class="urole ${u.rol}">${escapeHtml(u.rol)}</span>
+      </div>
+      <div class="usr-card-actions">
+        <button onclick="abrirModalUsuario(${idx})"><i class="ti ti-edit"></i> Editar</button>
+        <button class="btn-red" onclick="eliminarUsuarioConfirm('${escapeHtml(u.usuario)}')"><i class="ti ti-trash"></i> Eliminar</button>
+      </div>
+    </div>
+  `).join('')}</div>`;
+}
+
+function iniciales(nombre) {
+  const partes = String(nombre || '').trim().split(/\s+/);
+  return ((partes[0] || '')[0] || '') + ((partes[1] || '')[0] || '');
+}
+
+function sugerirUsuario() {
+  if (usuarioEnEdicion) return;
+  const nombre = document.getElementById('uNombre').value.trim();
+  document.getElementById('uUsuario').value = generarUsuarioFrontend_(nombre);
+}
+
+function generarUsuarioFrontend_(nombreCompleto) {
+  const limpio = nombreCompleto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+  const partes = limpio.trim().split(/\s+/).filter(Boolean);
+  if (!partes.length) return '';
+  if (partes.length === 1) return partes[0].toLowerCase();
+  return (partes[1].charAt(0) + partes[0]).toLowerCase();
+}
+
+// Recibe el índice dentro de usuariosCache (o nada, para "nuevo usuario")
+function abrirModalUsuario(idx) {
+  const usuario = (idx !== undefined) ? usuariosCache[idx] : null;
+  usuarioEnEdicion = usuario || null;
+
+  document.getElementById('usrModalTitle').innerHTML = usuario
+    ? '<i class="ti ti-edit"></i> Editar usuario'
+    : '<i class="ti ti-user-plus"></i> Nuevo usuario';
+
+  document.getElementById('uNombre').value = usuario ? usuario.nombre : '';
+  document.getElementById('uUsuario').value = usuario ? usuario.usuario : '';
+  document.getElementById('uRol').value = usuario ? usuario.rol : 'GESTION';
+  document.getElementById('uClave').value = usuario ? usuario.clave : '1234';
+  document.getElementById('uActivo').value = usuario ? String(usuario.activo) : 'true';
+  document.getElementById('uUsuario').disabled = !!usuario;
+
+  document.getElementById('usrModalOverlay').classList.add('open');
+}
+
+function cerrarModalUsuario() {
+  document.getElementById('usrModalOverlay').classList.remove('open');
+  usuarioEnEdicion = null;
+}
+
+async function guardarUsuario() {
+  const nombre = document.getElementById('uNombre').value.trim();
+  const usuario = document.getElementById('uUsuario').value.trim();
+  const rol = document.getElementById('uRol').value;
+  const clave = document.getElementById('uClave').value.trim();
+  const activo = document.getElementById('uActivo').value;
+
+  if (!nombre) { mostrarToast('Ingresá el nombre', 'err'); return; }
+
+  const btn = document.getElementById('btnGuardarUsuario');
+  btn.disabled = true;
+  btn.textContent = 'Guardando…';
+
+  try {
+    if (usuarioEnEdicion) {
+      await apiGet({ action: 'actualizarUsuario', usuarioOriginal: usuarioEnEdicion.usuario, nombre, rol, clave, activo });
+      mostrarToast('Usuario actualizado', 'ok');
+    } else {
+      await apiGet({ action: 'crearUsuario', nombre, usuario, rol, clave });
+      mostrarToast('Usuario creado', 'ok');
+    }
+    cerrarModalUsuario();
+    cargarUsuarios();
+  } catch (err) {
+    mostrarToast('Error: ' + err.message, 'err');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ti ti-device-floppy"></i> Guardar';
+  }
+}
+
+async function eliminarUsuarioConfirm(usuario) {
+  if (!confirm('¿Eliminar el usuario "' + usuario + '"? Esta acción no se puede deshacer.')) return;
+  try {
+    await apiGet({ action: 'eliminarUsuario', usuario });
+    mostrarToast('Usuario eliminado', 'ok');
+    cargarUsuarios();
+  } catch (err) {
+    mostrarToast('Error: ' + err.message, 'err');
+  }
+}
+
+document.getElementById('usrModalOverlay').addEventListener('click', (ev) => {
+  if (ev.target.id === 'usrModalOverlay') cerrarModalUsuario();
+});
+
+/*******************************************************
+ * EXPORTAR
+ *******************************************************/
+function exportarExcel() {
+  const filtrados = pedidosFiltrados();
+  if (!filtrados.length) { mostrarToast('No hay datos para exportar', 'err'); return; }
+  const filas = filtrados.map(p => ({
+    'N° NP': p.np, 'Fecha': p.fechaPedido, 'Artículo': p.articulo, 'Cantidad': p.cantidad,
+    'Destino': p.destino, 'Centro de costo': p.centroCosto, 'Solicitante': p.generador,
+    'Fecha necesidad': p.fechaNecesidad, 'Tipo de pedido': p.tipoPedido, 'Estado': p.estado,
+    'Responsable': p.responsable, 'Fecha cumplimiento': p.fechaCumplimiento, 'Cumplimiento': p.cumplimiento,
+    'PIM': p.pim, 'Transferencia': p.transferencia, 'Orden de compra': p.ordenCompra, 'Remito': p.remito,
+    'Observaciones': p.observaciones, 'Obs. depósito': p.obsDeposito
+  }));
+  const ws = XLSX.utils.json_to_sheet(filas);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Notas de Pedido');
+  XLSX.writeFile(wb, 'notas_pedido_' + new Date().toISOString().slice(0,10) + '.xlsx');
+}
+
+function exportarPDF() {
+  const filtrados = pedidosFiltrados();
+  if (!filtrados.length) { mostrarToast('No hay datos para exportar', 'err'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'landscape' });
+
+  doc.setFillColor(26, 26, 26);
+  doc.rect(0, 0, doc.internal.pageSize.getWidth(), 16, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(12);
+  doc.text('GRIFFOULIERE — Notas de Pedido (Tablero de Gestión)', 10, 10);
+  doc.setFontSize(9);
+  doc.text('Generado: ' + new Date().toLocaleString('es-AR'), doc.internal.pageSize.getWidth() - 65, 10);
+
+  doc.autoTable({
+    startY: 20,
+    head: [['N° NP','Fecha','Artículo','Cant.','Destino','C. Costo','Solicitante','Tipo','Estado','Responsable','F. Cumplim.','Cumplimiento']],
+    body: filtrados.map(p => [p.np, p.fechaPedido, p.articulo, p.cantidad, p.destino, p.centroCosto, p.generador, p.tipoPedido, p.estado, p.responsable, p.fechaCumplimiento, p.cumplimiento]),
+    styles: { fontSize: 6.5 },
+    headStyles: { fillColor: [26, 26, 26] },
+    didDrawPage: () => {
+      doc.setFontSize(8);
+      doc.setTextColor(150);
+      doc.text('Griffouliere S.A. — Página ' + doc.internal.getNumberOfPages(), 10, doc.internal.pageSize.getHeight() - 6);
+    }
+  });
+
+  doc.save('notas_pedido_' + new Date().toISOString().slice(0,10) + '.pdf');
+}
+
+/*******************************************************
+ * UTILS
+ *******************************************************/
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+iniciarApp();
+</script>
+</body>
+</html>
