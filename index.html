@@ -443,9 +443,9 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
 
     <div class="row2">
       <div class="field">
-        <label>PIM</label>
+        <label>PIM/SC</label>
         <input type="text" id="mPim">
-        <div class="hint">Obligatorio si el estado es EN PROCESO</div>
+        <div class="hint">Obligatorio si el estado es EN PROCESO. Si se carga, la Orden de compra pasa a ser obligatoria</div>
       </div>
       <div class="field">
         <label>Transferencia</label>
@@ -458,6 +458,7 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
       <div class="field">
         <label>Orden de compra</label>
         <input type="text" id="mOrdenCompra">
+        <div class="hint">Obligatoria si hay PIM/SC cargado. En CUMPLIDO EN DEPOSITO se pregunta si hace falta (si no, se completa como "NA")</div>
       </div>
       <div class="field">
         <label>Remito</label>
@@ -917,7 +918,7 @@ function renderTablero(filtrados) {
       <td class="nowrap"><span class="pill ${claseTipo(p.tipoPedido)}">${escapeHtml(p.tipoPedido || '—')}</span></td>
       <td class="nowrap"><span class="pill ${claseEstado(p.estado)}">${escapeHtml(p.estado || 'SIN ESTADO')}</span></td>
       <td class="trunc" style="max-width:120px" title="${escapeHtml(p.responsable || '')}">${escapeHtml(p.responsable || '—')}</td>
-      <td class="nowrap">PIM: ${escapeHtml(p.pim || '—')}<div class="subline">Transf: ${escapeHtml(p.transferencia || '—')}</div></td>
+      <td class="nowrap">PIM/SC: ${escapeHtml(p.pim || '—')}<div class="subline">Transf: ${escapeHtml(p.transferencia || '—')}</div></td>
       <td class="nowrap">${escapeHtml(p.fechaNecesidad || '—')}</td>
       <td class="nowrap">${escapeHtml(p.fechaCumplimiento || '—')}<div class="subline"><span class="pill ${claseCumplimiento(p.cumplimiento)}">${escapeHtml(p.cumplimiento || '—')}</span></div></td>
     </tr>
@@ -934,7 +935,7 @@ function renderTablero(filtrados) {
         <span><i class="ti ti-calendar"></i> ${escapeHtml(p.fechaPedido)}</span>
         <span><i class="ti ti-map-pin"></i> ${escapeHtml(p.destino || '')}</span>
         <span><i class="ti ti-user"></i> ${escapeHtml(p.generador || '')}</span>
-        <span><i class="ti ti-file-text"></i> PIM: ${escapeHtml(p.pim || '—')} · Transf: ${escapeHtml(p.transferencia || '—')}</span>
+        <span><i class="ti ti-file-text"></i> PIM/SC: ${escapeHtml(p.pim || '—')} · Transf: ${escapeHtml(p.transferencia || '—')}</span>
         <span><i class="ti ti-calendar-due"></i> F. Necesidad: ${escapeHtml(p.fechaNecesidad || '—')}</span>
         ${p.provieneDe ? `<span><i class="ti ti-truck"></i> Proviene de: ${escapeHtml(p.provieneDe)}</span>` : ''}
       </div>
@@ -952,7 +953,7 @@ function renderTablero(filtrados) {
           <thead><tr>
             <th>N° NP</th><th>Fecha</th><th>Artículo</th><th>Cant.</th><th>Destino</th>
             <th>Centro costo</th><th>Solicitante</th><th>Proviene de</th><th>Tipo</th><th>Estado</th>
-            <th>Responsable</th><th>PIM / Transf.</th><th>F. Necesidad</th><th>F. Cumplim. / Cumplimiento</th>
+            <th>Responsable</th><th>PIM/SC / Transf.</th><th>F. Necesidad</th><th>F. Cumplim. / Cumplimiento</th>
           </tr></thead>
           <tbody>${filasHtml}</tbody>
         </table>
@@ -1197,9 +1198,10 @@ async function guardarEdicion() {
   const estado = document.getElementById('mEstado').value;
   const pim = document.getElementById('mPim').value.trim();
   const transferencia = document.getElementById('mTransferencia').value.trim();
+  const ordenCompraInput = document.getElementById('mOrdenCompra');
 
   if (estado === 'EN PROCESO' && !pim) {
-    mostrarToast('Para poner el estado EN PROCESO, primero cargá el N° de PIM', 'err');
+    mostrarToast('Para poner el estado EN PROCESO, primero cargá el N° de PIM/SC', 'err');
     document.getElementById('mPim').focus();
     return;
   }
@@ -1207,6 +1209,20 @@ async function guardarEdicion() {
     mostrarToast('Para poner el estado CUMPLIDO, primero cargá el N° de Transferencia', 'err');
     document.getElementById('mTransferencia').focus();
     return;
+  }
+  if (pim && !ordenCompraInput.value.trim()) {
+    mostrarToast('Si hay N° de PIM/SC cargado, la Orden de Compra es obligatoria', 'err');
+    ordenCompraInput.focus();
+    return;
+  }
+  if (estado === 'CUMPLIDO EN DEPOSITO' && !ordenCompraInput.value.trim()) {
+    const requiereOC = confirm('¿Esta Nota de Pedido requiere Orden de Compra?\n\nAceptar = Sí, la voy a cargar\nCancelar = No, completar como "NA"');
+    if (requiereOC) {
+      mostrarToast('Cargá el N° de Orden de compra antes de guardar', 'err');
+      ordenCompraInput.focus();
+      return;
+    }
+    ordenCompraInput.value = 'NA';
   }
 
   const btn = document.getElementById('btnGuardarModal');
@@ -1428,7 +1444,7 @@ function exportarExcel() {
     'Proviene de': p.provieneDe,
     'Fecha necesidad': p.fechaNecesidad, 'Tipo de pedido': p.tipoPedido, 'Estado': p.estado,
     'Responsable': p.responsable, 'Fecha cumplimiento': p.fechaCumplimiento, 'Cumplimiento': p.cumplimiento,
-    'PIM': p.pim, 'Transferencia': p.transferencia, 'Orden de compra': p.ordenCompra, 'Remito': p.remito,
+    'PIM/SC': p.pim, 'Transferencia': p.transferencia, 'Orden de compra': p.ordenCompra, 'Remito': p.remito,
     'Observaciones': p.observaciones, 'Obs. depósito': p.obsDeposito
   }));
   const ws = XLSX.utils.json_to_sheet(filas);
