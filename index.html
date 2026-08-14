@@ -653,7 +653,11 @@ async function cargarPedidos() {
   mostrarPlaceholdersFiltros();
   try {
     const data = await apiGet({ action: 'getPedidosCompletos', anioDesde: '2026' });
-    pedidosCache = data.pedidos;
+    pedidosCache = data.pedidos.slice().sort((a, b) => {
+      const na = parseInt(a.np, 10);
+      const nb = parseInt(b.np, 10);
+      return (isNaN(nb) ? -Infinity : nb) - (isNaN(na) ? -Infinity : na); // N° de NP más alto primero
+    });
     poblarFiltrosDinamicos();
     onFiltrosChange();
   } catch (err) {
