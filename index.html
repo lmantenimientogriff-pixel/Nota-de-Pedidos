@@ -142,6 +142,11 @@ th:first-child,td:first-child{position:sticky;left:0;z-index:2;background:var(--
 th:first-child{background:var(--surface2);z-index:3}
 tbody tr:hover td{background:var(--surface2)}
 tbody tr:hover td:first-child{background:var(--surface2)}
+tr.fila-descuento td{background:#FDECEC}
+tr.fila-descuento td:first-child{background:#FDECEC}
+tr.fila-descuento:hover td{background:#FBDCDC}
+tr.fila-descuento:hover td:first-child{background:#FBDCDC}
+.ped-card.fila-descuento{background:#FDECEC;border-color:#F5C2C2}
 .empty{text-align:center;padding:30px;color:var(--text3);font-size:12px}
 .btn-edit{background:var(--blue-bg);color:var(--blue-text);border-color:var(--blue);font-size:10px;padding:3px 7px;white-space:nowrap}
 .np-cell{display:flex;align-items:center;gap:6px}
@@ -847,6 +852,10 @@ function esUrgentePendiente(p) {
   return p.tipoPedido === 'URGENTE' && !yaResuelto;
 }
 
+function esUnidadEnDescuento(provieneDe) {
+  return String(provieneDe || '').trim().toLowerCase() === 'unidad en descuento';
+}
+
 function claseEstado(estado) {
   if (!estado) return 'p-otro';
   const e = estado.toUpperCase();
@@ -894,7 +903,7 @@ function renderTablero(filtrados) {
   const quedan = filtrados.length - visibles.length;
 
   const filasHtml = visibles.map(p => `
-    <tr>
+    <tr class="${esUnidadEnDescuento(p.provieneDe) ? 'fila-descuento' : ''}">
       <td class="nowrap"><div class="np-cell"><strong>${escapeHtml(String(p.np))}</strong><button class="btn-edit" onclick="abrirModal(${p.fila})"><i class="ti ti-edit"></i> Gestionar</button></div></td>
       <td class="nowrap">${escapeHtml(p.fechaPedido)}</td>
       <td style="white-space:normal;max-width:260px">${escapeHtml(p.articulo || '')}</td>
@@ -902,6 +911,7 @@ function renderTablero(filtrados) {
       <td class="trunc" style="max-width:100px" title="${escapeHtml(p.destino || '')}">${escapeHtml(p.destino || '')}</td>
       <td style="white-space:normal;max-width:220px">${escapeHtml(p.centroCosto || '')}</td>
       <td class="trunc" style="max-width:130px" title="${escapeHtml(p.generador || '')}">${escapeHtml(p.generador || '')}</td>
+      <td class="nowrap">${escapeHtml(p.provieneDe || '—')}</td>
       <td class="nowrap"><span class="pill ${claseTipo(p.tipoPedido)}">${escapeHtml(p.tipoPedido || '—')}</span></td>
       <td class="nowrap"><span class="pill ${claseEstado(p.estado)}">${escapeHtml(p.estado || 'SIN ESTADO')}</span></td>
       <td class="trunc" style="max-width:120px" title="${escapeHtml(p.responsable || '')}">${escapeHtml(p.responsable || '—')}</td>
@@ -912,7 +922,7 @@ function renderTablero(filtrados) {
   `).join('');
 
   const cardsHtml = visibles.map(p => `
-    <div class="ped-card">
+    <div class="ped-card ${esUnidadEnDescuento(p.provieneDe) ? 'fila-descuento' : ''}">
       <div class="ped-card-top">
         <div class="np-cell"><span class="ped-np">N° ${escapeHtml(String(p.np))}</span><button class="btn-edit" onclick="abrirModal(${p.fila})"><i class="ti ti-edit"></i> Gestionar</button></div>
         <span class="pill ${claseEstado(p.estado)}">${escapeHtml(p.estado || 'SIN ESTADO')}</span>
@@ -924,6 +934,7 @@ function renderTablero(filtrados) {
         <span><i class="ti ti-user"></i> ${escapeHtml(p.generador || '')}</span>
         <span><i class="ti ti-file-text"></i> PIM: ${escapeHtml(p.pim || '—')} · Transf: ${escapeHtml(p.transferencia || '—')}</span>
         <span><i class="ti ti-calendar-due"></i> F. Necesidad: ${escapeHtml(p.fechaNecesidad || '—')}</span>
+        ${p.provieneDe ? `<span><i class="ti ti-truck"></i> Proviene de: ${escapeHtml(p.provieneDe)}</span>` : ''}
       </div>
       <div class="ped-bottom">
         <span class="pill ${claseTipo(p.tipoPedido)}">${escapeHtml(p.tipoPedido || '—')}</span>
@@ -938,7 +949,7 @@ function renderTablero(filtrados) {
         <table>
           <thead><tr>
             <th>N° NP</th><th>Fecha</th><th>Artículo</th><th>Cant.</th><th>Destino</th>
-            <th>Centro costo</th><th>Solicitante</th><th>Tipo</th><th>Estado</th>
+            <th>Centro costo</th><th>Solicitante</th><th>Proviene de</th><th>Tipo</th><th>Estado</th>
             <th>Responsable</th><th>PIM / Transf.</th><th>F. Necesidad</th><th>F. Cumplim. / Cumplimiento</th>
           </tr></thead>
           <tbody>${filasHtml}</tbody>
@@ -1131,6 +1142,7 @@ function abrirModal(fila) {
     <span><strong>Destino:</strong> ${escapeHtml(p.destino || '—')}</span>
     <span><strong>Centro de costo:</strong> ${escapeHtml(p.centroCosto || '—')}</span>
     <span><strong>Solicitante:</strong> ${escapeHtml(p.generador || '—')} · <strong>F. necesidad:</strong> ${escapeHtml(p.fechaNecesidad || '—')}</span>
+    ${p.provieneDe ? `<span><strong>Proviene de:</strong> ${escapeHtml(p.provieneDe)}</span>` : ''}
   `;
 
   document.getElementById('mEstado').value = p.estado || 'EN PROCESO';
@@ -1384,6 +1396,7 @@ function exportarExcel() {
   const filas = filtrados.map(p => ({
     'N° NP': p.np, 'Fecha': p.fechaPedido, 'Artículo': p.articulo, 'Cantidad': p.cantidad,
     'Destino': p.destino, 'Centro de costo': p.centroCosto, 'Solicitante': p.generador,
+    'Proviene de': p.provieneDe,
     'Fecha necesidad': p.fechaNecesidad, 'Tipo de pedido': p.tipoPedido, 'Estado': p.estado,
     'Responsable': p.responsable, 'Fecha cumplimiento': p.fechaCumplimiento, 'Cumplimiento': p.cumplimiento,
     'PIM': p.pim, 'Transferencia': p.transferencia, 'Orden de compra': p.ordenCompra, 'Remito': p.remito,
