@@ -909,18 +909,18 @@ function renderTablero(filtrados) {
     <tr class="${esUnidadEnDescuento(p.provieneDe) ? 'fila-descuento' : ''}">
       <td class="nowrap"><div class="np-cell"><strong>${escapeHtml(String(p.np))}</strong><button class="btn-edit" onclick="abrirModal(${p.fila})"><i class="ti ti-edit"></i> Gestionar</button></div></td>
       <td class="nowrap">${escapeHtml(p.fechaPedido)}</td>
-      <td style="white-space:normal;max-width:260px">${escapeHtml(p.articulo || '')}${p.observaciones ? `<div class="subline">Obs: ${escapeHtml(p.observaciones)}</div>` : ''}</td>
+      <td style="white-space:normal;max-width:340px">${escapeHtml(p.articulo || '')}${p.observaciones ? `<div class="subline">Obs: ${escapeHtml(p.observaciones)}</div>` : ''}</td>
       <td class="nowrap" style="text-align:center">${escapeHtml(String(p.cantidad || ''))}</td>
-      <td class="trunc" style="max-width:100px" title="${escapeHtml(p.destino || '')}">${escapeHtml(p.destino || '')}</td>
+      <td style="white-space:normal;max-width:85px">${escapeHtml(p.destino || '')}</td>
       <td style="white-space:normal;max-width:220px">${escapeHtml(p.centroCosto || '')}</td>
-      <td class="trunc" style="max-width:130px" title="${escapeHtml(p.generador || '')}">${escapeHtml(p.generador || '')}</td>
-      <td class="nowrap">${escapeHtml(p.provieneDe || '—')}</td>
+      <td style="white-space:normal;max-width:105px">${escapeHtml(p.generador || '')}</td>
+      <td style="white-space:normal;max-width:85px">${escapeHtml(p.provieneDe || '—')}</td>
       <td class="nowrap"><span class="pill ${claseTipo(p.tipoPedido)}">${escapeHtml(p.tipoPedido || '—')}</span></td>
       <td class="nowrap"><span class="pill ${claseEstado(p.estado)}">${escapeHtml(p.estado || 'SIN ESTADO')}</span></td>
-      <td class="trunc" style="max-width:120px" title="${escapeHtml(p.responsable || '')}">${escapeHtml(p.responsable || '—')}${p.obsDeposito ? `<div class="subline">Obs: ${escapeHtml(p.obsDeposito)}</div>` : ''}</td>
+      <td style="white-space:normal;max-width:105px">${escapeHtml(p.responsable || '—')}${p.obsDeposito ? `<div class="subline">Obs: ${escapeHtml(p.obsDeposito)}</div>` : ''}</td>
       <td class="nowrap">PIM/SC: ${escapeHtml(p.pim || '—')}<div class="subline">OC: ${escapeHtml(p.ordenCompra || '—')}</div><div class="subline">Transf: ${escapeHtml(p.transferencia || '—')}</div></td>
       <td class="nowrap">${escapeHtml(p.fechaNecesidad || '—')}</td>
-      <td class="nowrap">${escapeHtml(p.fechaCumplimiento || '—')}<div class="subline"><span class="pill ${claseCumplimiento(p.cumplimiento)}">${escapeHtml(p.cumplimiento || '—')}</span></div></td>
+      <td style="white-space:normal;max-width:110px">${escapeHtml(p.fechaCumplimiento || '—')}<div class="subline"><span class="pill ${claseCumplimiento(p.cumplimiento)}">${escapeHtml(p.cumplimiento || '—')}</span></div></td>
     </tr>
   `).join('');
 
