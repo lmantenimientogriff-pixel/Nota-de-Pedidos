@@ -545,6 +545,7 @@ let charts = {};
 let currentUser = null;
 const PAGE_SIZE = 1000;
 let filasVisibles = PAGE_SIZE;
+let cargaCompleta = false; // pasa a true cuando termina la carga de segundo plano
 
 const MS_KEYS = ['destino', 'centroCosto', 'generador', 'responsable', 'estado', 'tipo', 'cumplimiento'];
 const MS_CAMPO = { destino: 'destino', centroCosto: 'centroCosto', generador: 'generador', responsable: 'responsable', estado: 'estado', tipo: 'tipoPedido', cumplimiento: 'cumplimiento' };
@@ -660,21 +661,53 @@ function goToTab(id) {
 /*******************************************************
  * CARGA DE DATOS — PEDIDOS
  *******************************************************/
+function ordenarPorNP(pedidos) {
+  return pedidos.slice().sort((a, b) => {
+    const na = parseInt(a.np, 10);
+    const nb = parseInt(b.np, 10);
+    return (isNaN(nb) ? -Infinity : nb) - (isNaN(na) ? -Infinity : na); // N° de NP más alto primero
+  });
+}
+
 async function cargarPedidos() {
-  document.getElementById('tableroContent').innerHTML = '<div class="loading"><div class="spinner"></div>Cargando pedidos…</div>';
+  document.getElementById('tableroContent').innerHTML = '<div class="loading"><div class="spinner"></div>Cargando los últimos pedidos…</div>';
   mostrarPlaceholdersFiltros();
+  cargaCompleta = false;
   try {
-    const data = await apiGet({ action: 'getPedidosCompletos', anioDesde: '2026' });
-    pedidosCache = data.pedidos.slice().sort((a, b) => {
-      const na = parseInt(a.np, 10);
-      const nb = parseInt(b.np, 10);
-      return (isNaN(nb) ? -Infinity : nb) - (isNaN(na) ? -Infinity : na); // N° de NP más alto primero
-    });
+    const data = await apiGet({ action: 'getPedidosRecientes', npObjetivo: '500' });
+    pedidosCache = ordenarPorNP(data.pedidos);
     poblarFiltrosDinamicos();
     onFiltrosChange();
   } catch (err) {
     document.getElementById('tableroContent').innerHTML = '<div class="empty">Error al cargar: ' + escapeHtml(err.message) + '</div>';
+    return;
   }
+  // Apenas se ve algo en pantalla, sigue solo con el resto del historial en
+  // segundo plano — la planilla ya creció demasiado para traer todo de una.
+  cargarRestoEnSegundoPlano();
+}
+
+async function cargarRestoEnSegundoPlano() {
+  actualizarModoVistaBar();
+  try {
+    const data = await apiGet({ action: 'getPedidosCompletos', anioDesde: '2026' });
+    pedidosCache = ordenarPorNP(data.pedidos);
+    cargaCompleta = true;
+    poblarFiltrosDinamicos();
+    onFiltrosChange();
+  } catch (err) {
+    console.error('No se pudo completar la carga en segundo plano:', err);
+    cargaCompleta = true; // no reintenta solo; el usuario sigue viendo los recientes ya cargados
+    actualizarModoVistaBar();
+  }
+}
+
+function actualizarModoVistaBar() {
+  const cont = document.getElementById('modoVistaBar');
+  if (!cont) return;
+  cont.innerHTML = cargaCompleta
+    ? ''
+    : '<span><i class="ti ti-loader-2"></i> Mostrando los últimos pedidos — terminando de cargar el resto del historial en segundo plano, los filtros van a ir sumando resultados solos…</span>';
 }
 
 function poblarFiltrosDinamicos() {
