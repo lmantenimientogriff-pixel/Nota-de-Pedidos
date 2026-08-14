@@ -307,6 +307,10 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
         <div class="ms-wrapper" id="ms-provieneDe"></div>
       </div>
       <div class="fi">
+        <label>Depósito</label>
+        <div class="ms-wrapper" id="ms-deposito"></div>
+      </div>
+      <div class="fi">
         <label>Desde (fecha pedido)</label>
         <input type="date" id="filDesde" onchange="onFiltrosChange()">
       </div>
@@ -329,6 +333,7 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
   <div class="tabs">
     <div class="tab active" id="tab-btn-articulos" onclick="goToTab('articulos')"><i class="ti ti-table"></i> Artículos</div>
     <div class="tab" id="tab-btn-graficos" onclick="goToTab('graficos')"><i class="ti ti-chart-bar"></i> Gráficos</div>
+    <div class="tab" id="tab-btn-informe" onclick="goToTab('informe')"><i class="ti ti-mail"></i> Informe</div>
     <div class="tab" id="tab-btn-log" onclick="goToTab('log')" style="display:none"><i class="ti ti-history"></i> Log de cambios</div>
     <div class="tab" id="tab-btn-usuarios" onclick="goToTab('usuarios')" style="display:none"><i class="ti ti-users"></i> Usuarios</div>
   </div>
@@ -358,7 +363,7 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
   <div class="tcontent" id="tab-graficos">
 
     <div class="chart-card" style="margin-bottom:14px">
-      <div class="chart-card-title">Evolución mensual de N° de Notas de Pedido</div>
+      <div class="chart-card-title">Evolución mensual de Notas de Pedido por Depósito</div>
       <div class="chart-wrap"><canvas id="chart-evolucion"></canvas></div>
     </div>
 
@@ -393,6 +398,26 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
       <div class="chart-wrap-sm"><canvas id="chart-transferencia"></canvas></div>
     </div>
 
+  </div>
+
+  <!-- ===== TAB INFORME (repuestos en depósito, para el mail de fin de día) ===== -->
+  <div class="tcontent" id="tab-informe">
+    <div class="filters-bar" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-size:14px;font-weight:700" id="informeTitulo">Repuestos en depósito</div>
+        <div style="font-size:11px;color:var(--text3)" id="informeSubtitulo">Cargando…</div>
+      </div>
+      <div class="ebtns">
+        <button onclick="copiarTextoInforme()"><i class="ti ti-copy"></i> Copiar texto</button>
+        <button onclick="exportarInformeExcel()"><i class="ti ti-file-spreadsheet"></i> Excel</button>
+        <button onclick="exportarInformePDF()"><i class="ti ti-file-type-pdf"></i> PDF</button>
+        <button class="primary" onclick="abrirEmailInforme()"><i class="ti ti-mail"></i> Abrir en mi correo</button>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:10px">
+      Toma los pedidos con estado <strong>CUMPLIDO EN DEPOSITO</strong>, respetando los filtros de arriba. "Abrir en mi correo" arma un borrador con tu programa de mail de siempre — si la lista es muy larga, algunos clientes de correo la recortan, en ese caso mejor usá "Copiar texto" y pegalo directo.
+    </div>
+    <div id="informeContent"><div class="loading"><div class="spinner"></div>Cargando…</div></div>
   </div>
 
   <!-- ===== TAB LOG DE CAMBIOS (solo ADMINISTRADOR / PROPIETARIO) ===== -->
@@ -556,8 +581,8 @@ const PAGE_SIZE = 1000;
 let filasVisibles = PAGE_SIZE;
 let cargaCompleta = false; // pasa a true cuando termina la carga de segundo plano
 
-const MS_KEYS = ['destino', 'centroCosto', 'generador', 'responsable', 'estado', 'tipo', 'cumplimiento', 'provieneDe'];
-const MS_CAMPO = { destino: 'destino', centroCosto: 'centroCosto', generador: 'generador', responsable: 'responsable', estado: 'estado', tipo: 'tipoPedido', cumplimiento: 'cumplimiento', provieneDe: 'provieneDe' };
+const MS_KEYS = ['destino', 'centroCosto', 'generador', 'responsable', 'estado', 'tipo', 'cumplimiento', 'provieneDe', 'deposito'];
+const MS_CAMPO = { destino: 'destino', centroCosto: 'centroCosto', generador: 'generador', responsable: 'responsable', estado: 'estado', tipo: 'tipoPedido', cumplimiento: 'cumplimiento', provieneDe: 'provieneDe', deposito: 'deposito' };
 let msState = {};
 let msOpciones = {};
 MS_KEYS.forEach(k => { msState[k] = new Set(); msOpciones[k] = []; });
@@ -663,6 +688,7 @@ function goToTab(id) {
   document.getElementById('tab-' + id).classList.add('active');
 
   if (id === 'graficos') renderGraficos(pedidosFiltrados());
+  if (id === 'informe') renderInforme();
   if (id === 'log') cargarLog();
   if (id === 'usuarios') cargarUsuarios();
 }
@@ -670,7 +696,16 @@ function goToTab(id) {
 /*******************************************************
  * CARGA DE DATOS — PEDIDOS
  *******************************************************/
+function clasificarDeposito(centroCosto) {
+  const c = String(centroCosto || '').toLowerCase();
+  if (c.startsWith('nqn')) return 'NEUQUÉN';
+  if (c.startsWith('mza') || c.startsWith('cuyo') || c.startsWith('arg')) return 'MENDOZA';
+  if (c.startsWith('mgue')) return 'MALARGÜE';
+  return '';
+}
+
 function ordenarPorNP(pedidos) {
+  pedidos.forEach(p => { p.deposito = clasificarDeposito(p.centroCosto); });
   return pedidos.slice().sort((a, b) => {
     const na = parseInt(a.np, 10);
     const nb = parseInt(b.np, 10);
@@ -725,7 +760,7 @@ function poblarFiltrosDinamicos() {
     const valores = pedidosCache.map(p => {
       const v = p[campo];
       if (v) return v;
-      return (key === 'estado') ? 'SIN ESTADO' : (key === 'cumplimiento' || key === 'provieneDe' ? 'SIN DATO' : null);
+      return (key === 'estado') ? 'SIN ESTADO' : (key === 'cumplimiento' || key === 'provieneDe' ? 'SIN DATO' : (key === 'deposito' ? 'SIN CLASIFICAR' : null));
     }).filter(v => v !== null && v !== undefined);
     const unicos = [...new Set(valores)].sort();
     poblarMultiselect(key, unicos);
@@ -840,7 +875,7 @@ function pedidosFiltrados() {
       if (!msState[key].size) continue;
       const campo = MS_CAMPO[key];
       let valor = p[campo];
-      if (!valor) valor = (key === 'estado') ? 'SIN ESTADO' : (key === 'cumplimiento' || key === 'provieneDe' ? 'SIN DATO' : '');
+      if (!valor) valor = (key === 'estado') ? 'SIN ESTADO' : (key === 'cumplimiento' || key === 'provieneDe' ? 'SIN DATO' : (key === 'deposito' ? 'SIN CLASIFICAR' : ''));
       if (!msState[key].has(valor)) return false;
     }
 
@@ -876,6 +911,7 @@ function onFiltrosChange() {
   const filtrados = pedidosFiltrados();
   renderTablero(filtrados);
   if (vistaActual === 'graficos') renderGraficos(filtrados);
+  if (vistaActual === 'informe') renderInforme();
 }
 
 let debounceTimer = null;
@@ -1120,13 +1156,20 @@ function mkEvolucionMensual(canvasId, filtrados) {
   const ctx = document.getElementById(canvasId);
   if (!ctx) return;
 
-  const porMes = {};
+  const DEPOSITOS = ['NEUQUÉN', 'MENDOZA', 'MALARGÜE', 'SIN CLASIFICAR'];
+  const COLOR_DEPOSITO = { 'NEUQUÉN': '#378ADD', 'MENDOZA': '#EF9F27', 'MALARGÜE': '#1D9E75', 'SIN CLASIFICAR': '#888780' };
+
+  const porMes = {}; // { 'yyyy-mm': { NEUQUÉN: Set, MENDOZA: Set, MALARGÜE: Set, 'SIN CLASIFICAR': Set } }
   filtrados.forEach(p => {
     const f = parseFechaDDMMYYYY(p.fechaPedido);
     if (!f) return;
     const key = f.getFullYear() + '-' + String(f.getMonth() + 1).padStart(2, '0');
-    if (!porMes[key]) porMes[key] = new Set();
-    porMes[key].add(p.np);
+    if (!porMes[key]) {
+      porMes[key] = {};
+      DEPOSITOS.forEach(d => { porMes[key][d] = new Set(); });
+    }
+    const dep = p.deposito || 'SIN CLASIFICAR';
+    porMes[key][dep].add(p.np);
   });
 
   const keysOrdenadas = Object.keys(porMes).sort();
@@ -1137,21 +1180,28 @@ function mkEvolucionMensual(canvasId, filtrados) {
     const [anio, mes] = k.split('-');
     return MESES[parseInt(mes, 10) - 1] + ' ' + anio;
   });
-  const data = keysOrdenadas.map(k => porMes[k].size);
+
+  // Solo se muestran en la leyenda los depósitos que efectivamente tienen datos
+  const depositosConDatos = DEPOSITOS.filter(d => keysOrdenadas.some(k => porMes[k][d].size > 0));
+  const datasets = depositosConDatos.map(d => ({
+    label: d,
+    data: keysOrdenadas.map(k => porMes[k][d].size),
+    backgroundColor: COLOR_DEPOSITO[d]
+  }));
 
   charts[canvasId] = new Chart(ctx, {
     type: 'bar',
-    data: { labels, datasets: [{ label: 'N° de Notas de Pedido', data, backgroundColor: '#378ADD', borderRadius: 4 }] },
+    data: { labels, datasets },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
-        legend: { display: false },
-        tooltip: { callbacks: { label: (c) => ` ${c.parsed.y} notas` } },
-        datalabels: { color: '#1a1a1a', anchor: 'end', align: 'end', font: { size: 10, weight: 'bold' }, formatter: (v) => v }
+        legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 10, padding: 8 } },
+        tooltip: { callbacks: { label: (c) => ` ${c.dataset.label}: ${c.parsed.y} nota(s)` } },
+        datalabels: { color: '#fff', font: { size: 9, weight: 'bold' }, formatter: (v) => v > 0 ? v : '' }
       },
       scales: {
-        x: { ticks: { font: { size: 10 } }, grid: { display: false } },
-        y: { beginAtZero: true, ticks: { font: { size: 10 }, precision: 0 } }
+        x: { stacked: true, ticks: { font: { size: 10 } }, grid: { display: false } },
+        y: { stacked: true, beginAtZero: true, ticks: { font: { size: 10 }, precision: 0 } }
       }
     }
   });
@@ -1503,6 +1553,129 @@ async function eliminarUsuarioConfirm(usuario) {
 document.getElementById('usrModalOverlay').addEventListener('click', (ev) => {
   if (ev.target.id === 'usrModalOverlay') cerrarModalUsuario();
 });
+
+/*******************************************************
+ * TAB INFORME — repuestos en depósito, para el mail de fin de día
+ *******************************************************/
+function obtenerItemsInforme() {
+  return pedidosFiltrados().filter(p => p.estado === 'CUMPLIDO EN DEPOSITO');
+}
+
+function renderInforme() {
+  const items = obtenerItemsInforme();
+  const hoy = new Date().toLocaleDateString('es-AR');
+
+  document.getElementById('informeTitulo').textContent = 'Repuestos en depósito — ' + hoy;
+  document.getElementById('informeSubtitulo').textContent = items.length + ' ítem(s) esperando ser retirados';
+
+  const cont = document.getElementById('informeContent');
+  if (!items.length) {
+    cont.innerHTML = '<div class="tbl-card"><div class="empty">No hay repuestos en depósito con los filtros actuales</div></div>';
+    return;
+  }
+
+  const filas = items.map(p => `
+    <tr>
+      <td class="nowrap"><strong>${escapeHtml(String(p.np))}</strong></td>
+      <td style="white-space:normal;max-width:300px">${escapeHtml(p.articulo || '')}</td>
+      <td class="nowrap" style="text-align:center">${escapeHtml(String(p.cantidad || ''))}</td>
+      <td class="nowrap">${escapeHtml(p.destino || '—')}</td>
+      <td style="white-space:normal;max-width:160px">${escapeHtml(p.generador || '—')}</td>
+      <td style="white-space:normal;max-width:180px">${escapeHtml(p.centroCosto || '—')}</td>
+      <td class="nowrap">${escapeHtml(p.fechaCumplimiento || '—')}</td>
+    </tr>
+  `).join('');
+
+  cont.innerHTML = `
+    <div class="tbl-card">
+      <div class="twrap" style="display:block">
+        <table>
+          <thead><tr>
+            <th>N° NP</th><th>Artículo</th><th>Cant.</th><th>Destino</th><th>Solicitante</th><th>Centro de costo</th><th>Llegó a depósito</th>
+          </tr></thead>
+          <tbody>${filas}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function generarTextoInforme(items) {
+  const hoy = new Date().toLocaleDateString('es-AR');
+  let texto = `INFORME DE REPUESTOS EN DEPÓSITO — ${hoy}\n`;
+  texto += `Total: ${items.length} ítem(s)\n\n`;
+  items.forEach(p => {
+    texto += `• NP ${p.np} — ${p.articulo || ''} (x${p.cantidad || 1})\n`;
+    texto += `   Destino: ${p.destino || '-'}  |  Solicitante: ${p.generador || '-'}\n`;
+    texto += `   Centro de costo: ${p.centroCosto || '-'}\n`;
+    texto += `   Llegó a depósito: ${p.fechaCumplimiento || '-'}\n\n`;
+  });
+  return texto;
+}
+
+async function copiarTextoInforme() {
+  const items = obtenerItemsInforme();
+  if (!items.length) { mostrarToast('No hay repuestos en depósito para informar', 'err'); return; }
+  const texto = generarTextoInforme(items);
+  try {
+    await navigator.clipboard.writeText(texto);
+    mostrarToast('Texto copiado, ya lo podés pegar en el mail', 'ok');
+  } catch (err) {
+    mostrarToast('No se pudo copiar automáticamente: ' + err.message, 'err');
+  }
+}
+
+function abrirEmailInforme() {
+  const items = obtenerItemsInforme();
+  if (!items.length) { mostrarToast('No hay repuestos en depósito para informar', 'err'); return; }
+  const hoy = new Date().toLocaleDateString('es-AR');
+  const asunto = encodeURIComponent('Informe de repuestos en depósito - ' + hoy);
+  const cuerpo = encodeURIComponent(generarTextoInforme(items));
+  window.location.href = 'mailto:?subject=' + asunto + '&body=' + cuerpo;
+}
+
+function exportarInformeExcel() {
+  const items = obtenerItemsInforme();
+  if (!items.length) { mostrarToast('No hay datos para exportar', 'err'); return; }
+  const filas = items.map(p => ({
+    'N° NP': p.np, 'Artículo': p.articulo, 'Cantidad': p.cantidad, 'Destino': p.destino,
+    'Solicitante': p.generador, 'Centro de costo': p.centroCosto, 'Llegó a depósito': p.fechaCumplimiento
+  }));
+  const ws = XLSX.utils.json_to_sheet(filas);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Repuestos en Deposito');
+  XLSX.writeFile(wb, 'informe_deposito_' + new Date().toISOString().slice(0,10) + '.xlsx');
+}
+
+function exportarInformePDF() {
+  const items = obtenerItemsInforme();
+  if (!items.length) { mostrarToast('No hay datos para exportar', 'err'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'landscape' });
+
+  doc.setFillColor(26, 26, 26);
+  doc.rect(0, 0, doc.internal.pageSize.getWidth(), 16, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(12);
+  doc.text('GRIFFOULIERE — Repuestos en Depósito', 10, 10);
+  doc.setFontSize(9);
+  doc.text('Generado: ' + new Date().toLocaleString('es-AR'), doc.internal.pageSize.getWidth() - 65, 10);
+
+  doc.autoTable({
+    startY: 20,
+    head: [['N° NP','Artículo','Cant.','Destino','Solicitante','Centro de costo','Llegó a depósito']],
+    body: items.map(p => [p.np, p.articulo, p.cantidad, p.destino, p.generador, p.centroCosto, p.fechaCumplimiento]),
+    styles: { fontSize: 7 },
+    headStyles: { fillColor: [26, 26, 26] },
+    didDrawPage: () => {
+      doc.setFontSize(8);
+      doc.setTextColor(150);
+      doc.text('Griffouliere S.A. — Página ' + doc.internal.getNumberOfPages(), 10, doc.internal.pageSize.getHeight() - 6);
+    }
+  });
+
+  doc.save('informe_deposito_' + new Date().toISOString().slice(0,10) + '.pdf');
+}
 
 /*******************************************************
  * EXPORTAR
