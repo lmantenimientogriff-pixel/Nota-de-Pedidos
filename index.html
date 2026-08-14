@@ -909,7 +909,7 @@ function renderTablero(filtrados) {
     <tr class="${esUnidadEnDescuento(p.provieneDe) ? 'fila-descuento' : ''}">
       <td class="nowrap"><div class="np-cell"><strong>${escapeHtml(String(p.np))}</strong><button class="btn-edit" onclick="abrirModal(${p.fila})"><i class="ti ti-edit"></i> Gestionar</button></div></td>
       <td class="nowrap">${escapeHtml(p.fechaPedido)}</td>
-      <td style="white-space:normal;max-width:260px">${escapeHtml(p.articulo || '')}</td>
+      <td style="white-space:normal;max-width:260px">${escapeHtml(p.articulo || '')}${p.observaciones ? `<div class="subline">Obs: ${escapeHtml(p.observaciones)}</div>` : ''}</td>
       <td class="nowrap" style="text-align:center">${escapeHtml(String(p.cantidad || ''))}</td>
       <td class="trunc" style="max-width:100px" title="${escapeHtml(p.destino || '')}">${escapeHtml(p.destino || '')}</td>
       <td style="white-space:normal;max-width:220px">${escapeHtml(p.centroCosto || '')}</td>
@@ -917,8 +917,8 @@ function renderTablero(filtrados) {
       <td class="nowrap">${escapeHtml(p.provieneDe || '—')}</td>
       <td class="nowrap"><span class="pill ${claseTipo(p.tipoPedido)}">${escapeHtml(p.tipoPedido || '—')}</span></td>
       <td class="nowrap"><span class="pill ${claseEstado(p.estado)}">${escapeHtml(p.estado || 'SIN ESTADO')}</span></td>
-      <td class="trunc" style="max-width:120px" title="${escapeHtml(p.responsable || '')}">${escapeHtml(p.responsable || '—')}</td>
-      <td class="nowrap">PIM/SC: ${escapeHtml(p.pim || '—')}<div class="subline">Transf: ${escapeHtml(p.transferencia || '—')}</div></td>
+      <td class="trunc" style="max-width:120px" title="${escapeHtml(p.responsable || '')}">${escapeHtml(p.responsable || '—')}${p.obsDeposito ? `<div class="subline">Obs: ${escapeHtml(p.obsDeposito)}</div>` : ''}</td>
+      <td class="nowrap">PIM/SC: ${escapeHtml(p.pim || '—')}<div class="subline">OC: ${escapeHtml(p.ordenCompra || '—')}</div><div class="subline">Transf: ${escapeHtml(p.transferencia || '—')}</div></td>
       <td class="nowrap">${escapeHtml(p.fechaNecesidad || '—')}</td>
       <td class="nowrap">${escapeHtml(p.fechaCumplimiento || '—')}<div class="subline"><span class="pill ${claseCumplimiento(p.cumplimiento)}">${escapeHtml(p.cumplimiento || '—')}</span></div></td>
     </tr>
@@ -931,13 +931,16 @@ function renderTablero(filtrados) {
         <span class="pill ${claseEstado(p.estado)}">${escapeHtml(p.estado || 'SIN ESTADO')}</span>
       </div>
       <div class="ped-art">${escapeHtml(p.articulo || '')} ${p.cantidad ? '(x' + escapeHtml(String(p.cantidad)) + ')' : ''}</div>
+      ${p.observaciones ? `<div class="subline">Obs. formulario: ${escapeHtml(p.observaciones)}</div>` : ''}
       <div class="ped-meta">
         <span><i class="ti ti-calendar"></i> ${escapeHtml(p.fechaPedido)}</span>
         <span><i class="ti ti-map-pin"></i> ${escapeHtml(p.destino || '')}</span>
         <span><i class="ti ti-user"></i> ${escapeHtml(p.generador || '')}</span>
-        <span><i class="ti ti-file-text"></i> PIM/SC: ${escapeHtml(p.pim || '—')} · Transf: ${escapeHtml(p.transferencia || '—')}</span>
+        <span><i class="ti ti-file-text"></i> PIM/SC: ${escapeHtml(p.pim || '—')} · OC: ${escapeHtml(p.ordenCompra || '—')} · Transf: ${escapeHtml(p.transferencia || '—')}</span>
         <span><i class="ti ti-calendar-due"></i> F. Necesidad: ${escapeHtml(p.fechaNecesidad || '—')}</span>
         ${p.provieneDe ? `<span><i class="ti ti-truck"></i> Proviene de: ${escapeHtml(p.provieneDe)}</span>` : ''}
+        ${p.responsable ? `<span><i class="ti ti-user-check"></i> Responsable: ${escapeHtml(p.responsable)}</span>` : ''}
+        ${p.obsDeposito ? `<span><i class="ti ti-note"></i> Obs. depósito: ${escapeHtml(p.obsDeposito)}</span>` : ''}
       </div>
       <div class="ped-bottom">
         <span class="pill ${claseTipo(p.tipoPedido)}">${escapeHtml(p.tipoPedido || '—')}</span>
@@ -953,7 +956,7 @@ function renderTablero(filtrados) {
           <thead><tr>
             <th>N° NP</th><th>Fecha</th><th>Artículo</th><th>Cant.</th><th>Destino</th>
             <th>Centro costo</th><th>Solicitante</th><th>Proviene de</th><th>Tipo</th><th>Estado</th>
-            <th>Responsable</th><th>PIM/SC / Transf.</th><th>F. Necesidad</th><th>F. Cumplim. / Cumplimiento</th>
+            <th>Responsable</th><th>PIM/SC / OC / Transf.</th><th>F. Necesidad</th><th>F. Cumplim. / Cumplimiento</th>
           </tr></thead>
           <tbody>${filasHtml}</tbody>
         </table>
