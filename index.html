@@ -303,6 +303,10 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
         <div class="ms-wrapper" id="ms-cumplimiento"></div>
       </div>
       <div class="fi">
+        <label>Proviene de</label>
+        <div class="ms-wrapper" id="ms-provieneDe"></div>
+      </div>
+      <div class="fi">
         <label>Desde (fecha pedido)</label>
         <input type="date" id="filDesde" onchange="onFiltrosChange()">
       </div>
@@ -382,6 +386,11 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
         <div class="chart-card-title">Top 10 Artículos más pedidos</div>
         <div class="chart-wrap"><canvas id="chart-articulos"></canvas></div>
       </div>
+    </div>
+
+    <div class="chart-card" style="margin-bottom:14px">
+      <div class="chart-card-title">Pedidos Cumplidos con N° de Transferencia cargado</div>
+      <div class="chart-wrap-sm"><canvas id="chart-transferencia"></canvas></div>
     </div>
 
   </div>
@@ -547,8 +556,8 @@ const PAGE_SIZE = 1000;
 let filasVisibles = PAGE_SIZE;
 let cargaCompleta = false; // pasa a true cuando termina la carga de segundo plano
 
-const MS_KEYS = ['destino', 'centroCosto', 'generador', 'responsable', 'estado', 'tipo', 'cumplimiento'];
-const MS_CAMPO = { destino: 'destino', centroCosto: 'centroCosto', generador: 'generador', responsable: 'responsable', estado: 'estado', tipo: 'tipoPedido', cumplimiento: 'cumplimiento' };
+const MS_KEYS = ['destino', 'centroCosto', 'generador', 'responsable', 'estado', 'tipo', 'cumplimiento', 'provieneDe'];
+const MS_CAMPO = { destino: 'destino', centroCosto: 'centroCosto', generador: 'generador', responsable: 'responsable', estado: 'estado', tipo: 'tipoPedido', cumplimiento: 'cumplimiento', provieneDe: 'provieneDe' };
 let msState = {};
 let msOpciones = {};
 MS_KEYS.forEach(k => { msState[k] = new Set(); msOpciones[k] = []; });
@@ -716,7 +725,7 @@ function poblarFiltrosDinamicos() {
     const valores = pedidosCache.map(p => {
       const v = p[campo];
       if (v) return v;
-      return (key === 'estado') ? 'SIN ESTADO' : (key === 'cumplimiento' ? 'SIN DATO' : null);
+      return (key === 'estado') ? 'SIN ESTADO' : (key === 'cumplimiento' || key === 'provieneDe' ? 'SIN DATO' : null);
     }).filter(v => v !== null && v !== undefined);
     const unicos = [...new Set(valores)].sort();
     poblarMultiselect(key, unicos);
@@ -831,7 +840,7 @@ function pedidosFiltrados() {
       if (!msState[key].size) continue;
       const campo = MS_CAMPO[key];
       let valor = p[campo];
-      if (!valor) valor = (key === 'estado') ? 'SIN ESTADO' : (key === 'cumplimiento' ? 'SIN DATO' : '');
+      if (!valor) valor = (key === 'estado') ? 'SIN ESTADO' : (key === 'cumplimiento' || key === 'provieneDe' ? 'SIN DATO' : '');
       if (!msState[key].has(valor)) return false;
     }
 
@@ -1054,16 +1063,17 @@ function labelPorcentaje(value, ctx) {
   return pct < 4 ? '' : pct.toFixed(0) + '%';
 }
 
-function mkDonut(canvasId, dataMap) {
+function mkDonut(canvasId, dataMap, coloresPersonalizados) {
   destruirChart(canvasId);
   const ctx = document.getElementById(canvasId);
   if (!ctx) return;
   const labels = Object.keys(dataMap);
   const data = Object.values(dataMap);
   if (!data.length) return;
+  const colores = coloresPersonalizados || labels.map((_, i) => PALETTE[i % PALETTE.length]);
   charts[canvasId] = new Chart(ctx, {
     type: 'doughnut',
-    data: { labels, datasets: [{ data, backgroundColor: labels.map((_, i) => PALETTE[i % PALETTE.length]), borderWidth: 0 }] },
+    data: { labels, datasets: [{ data, backgroundColor: colores, borderWidth: 0 }] },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
@@ -1149,7 +1159,7 @@ function mkEvolucionMensual(canvasId, filtrados) {
 
 function renderGraficos(filtrados) {
   if (!filtrados.length) {
-    ['chart-evolucion','chart-tipo','chart-estado','chart-cumplimiento','chart-cc','chart-articulos'].forEach(destruirChart);
+    ['chart-evolucion','chart-tipo','chart-estado','chart-cumplimiento','chart-cc','chart-articulos','chart-transferencia'].forEach(destruirChart);
     return;
   }
 
@@ -1166,6 +1176,15 @@ function renderGraficos(filtrados) {
 
   mkBarTop10('chart-cc', contarPor(filtrados, 'centroCosto'), filtrados.length);
   mkBarTop10('chart-articulos', contarPor(filtrados, 'articulo'), filtrados.length);
+
+  const cumplidos = filtrados.filter(p => p.estado === 'CUMPLIDO');
+  if (cumplidos.length) {
+    const conTransferencia = cumplidos.filter(p => String(p.transferencia || '').trim()).length;
+    const sinTransferencia = cumplidos.length - conTransferencia;
+    mkDonut('chart-transferencia', { 'Con Transferencia': conTransferencia, 'Sin Transferencia': sinTransferencia }, ['#1D9E75', '#C00000']);
+  } else {
+    destruirChart('chart-transferencia');
+  }
 }
 
 /*******************************************************
