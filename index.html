@@ -431,8 +431,9 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
     <div class="row2">
       <div class="field">
         <label>Responsable</label>
-        <input type="text" id="mResponsable" list="lstResponsables" placeholder="Nombre y apellido">
-        <datalist id="lstResponsables"></datalist>
+        <select id="mResponsable">
+          <option value="">— Sin asignar —</option>
+        </select>
       </div>
       <div class="field date-edit">
         <label>Fecha de cumplimiento</label>
@@ -626,6 +627,7 @@ function mostrarApp() {
   document.getElementById('tab-btn-log').style.display = esAdmin ? 'flex' : 'none';
   document.getElementById('tab-btn-usuarios').style.display = esAdmin ? 'flex' : 'none';
 
+  cargarUsuarios(); // todos los roles la necesitan: alimenta el desplegable de Responsable
   cargarPedidos();
 }
 
@@ -686,8 +688,6 @@ function poblarFiltrosDinamicos() {
     const unicos = [...new Set(valores)].sort();
     poblarMultiselect(key, unicos);
   });
-  document.getElementById('lstResponsables').innerHTML =
-    [...new Set(pedidosCache.map(p => p.responsable).filter(Boolean))].sort().map(v => `<option value="${escapeHtml(v)}">`).join('');
 }
 
 /*******************************************************
@@ -1135,6 +1135,23 @@ function renderGraficos(filtrados) {
 /*******************************************************
  * MODAL DE EDICIÓN DE PEDIDO (columnas L → S)
  *******************************************************/
+// Arma el desplegable de Responsable con TODOS los usuarios del sistema
+// (todos los roles, activos e inactivos). Si el valor que ya tenía guardado
+// la nota no coincide con ningún usuario actual, se agrega igual como opción
+// aparte para no perderlo silenciosamente.
+function poblarSelectResponsable(valorActual) {
+  const sel = document.getElementById('mResponsable');
+  const nombres = [...new Set(usuariosCache.map(u => u.nombre).filter(Boolean))].sort();
+
+  let html = '<option value="">— Sin asignar —</option>';
+  nombres.forEach(n => { html += `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`; });
+  if (valorActual && !nombres.includes(valorActual)) {
+    html += `<option value="${escapeHtml(valorActual)}">${escapeHtml(valorActual)} (no es un usuario del sistema)</option>`;
+  }
+  sel.innerHTML = html;
+  sel.value = valorActual || '';
+}
+
 function abrirModal(fila) {
   const p = pedidosCache.find(x => x.fila === fila);
   if (!p) return;
@@ -1149,7 +1166,7 @@ function abrirModal(fila) {
   `;
 
   document.getElementById('mEstado').value = p.estado || 'EN PROCESO';
-  document.getElementById('mResponsable').value = p.responsable || '';
+  poblarSelectResponsable(p.responsable);
   document.getElementById('mFechaCumplimiento').value = p.fechaCumplimientoISO || '';
   document.getElementById('mPim').value = p.pim || '';
   document.getElementById('mTransferencia').value = p.transferencia || '';
