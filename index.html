@@ -438,10 +438,12 @@ tbody tr:hover td:first-child{background:var(--surface2)}
       <div class="field">
         <label>PIM</label>
         <input type="text" id="mPim">
+        <div class="hint">Obligatorio si el estado es EN PROCESO</div>
       </div>
       <div class="field">
         <label>Transferencia</label>
         <input type="text" id="mTransferencia">
+        <div class="hint">Obligatorio si el estado es CUMPLIDO</div>
       </div>
     </div>
 
@@ -1150,6 +1152,22 @@ function cerrarModal() {
 
 async function guardarEdicion() {
   if (!filaEnEdicion) return;
+
+  const estado = document.getElementById('mEstado').value;
+  const pim = document.getElementById('mPim').value.trim();
+  const transferencia = document.getElementById('mTransferencia').value.trim();
+
+  if (estado === 'EN PROCESO' && !pim) {
+    mostrarToast('Para poner el estado EN PROCESO, primero cargá el N° de PIM', 'err');
+    document.getElementById('mPim').focus();
+    return;
+  }
+  if (estado === 'CUMPLIDO' && !transferencia) {
+    mostrarToast('Para poner el estado CUMPLIDO, primero cargá el N° de Transferencia', 'err');
+    document.getElementById('mTransferencia').focus();
+    return;
+  }
+
   const btn = document.getElementById('btnGuardarModal');
   btn.disabled = true;
   btn.textContent = 'Guardando…';
