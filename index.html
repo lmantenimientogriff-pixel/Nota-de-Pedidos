@@ -186,6 +186,8 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
 .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--blue);background:var(--surface)}
 .field textarea{min-height:56px;resize:vertical}
 .field.date-edit input{border-color:var(--blue)}
+.field input:disabled{background:var(--surface3);color:var(--text3);cursor:not-allowed;border-color:var(--border)}
+.hint.hint-lock{color:var(--red-text);font-weight:600}
 .field .hint{font-size:10px;color:var(--text3);margin-top:4px}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
@@ -435,7 +437,7 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
       <div class="field date-edit">
         <label>Fecha de cumplimiento</label>
         <input type="date" id="mFechaCumplimiento">
-        <div class="hint">Al completarla, las columnas de cumplimiento se recalculan solas</div>
+        <div class="hint" id="hintFechaCumplimiento">Al completarla, las columnas de cumplimiento se recalculan solas</div>
       </div>
     </div>
 
@@ -1154,8 +1156,35 @@ function abrirModal(fila) {
   document.getElementById('mRemito').value = p.remito || '';
   document.getElementById('mObsDeposito').value = p.obsDeposito || '';
 
+  actualizarBloqueoFechaCumplimiento();
   document.getElementById('modalOverlay').classList.add('open');
 }
+
+// La Fecha de Cumplimiento es la fecha real de recepción en depósito. Una vez
+// que la nota ya pasó por "CUMPLIDO EN DEPOSITO", esa fecha queda fija: si
+// después se cambia el estado a "CUMPLIDO", el campo se bloquea para que no
+// se pueda pisar por error (el cumplimiento fue cuando llegó al depósito,
+// no cuando se marca como Cumplido finalmente).
+function actualizarBloqueoFechaCumplimiento() {
+  const estadoOriginal = filaEnEdicion ? (filaEnEdicion.estado || '') : '';
+  const estadoNuevo = document.getElementById('mEstado').value;
+  const input = document.getElementById('mFechaCumplimiento');
+  const hint = document.getElementById('hintFechaCumplimiento');
+
+  const bloquear = estadoOriginal === 'CUMPLIDO EN DEPOSITO' && estadoNuevo === 'CUMPLIDO';
+
+  input.disabled = bloquear;
+  if (bloquear) {
+    input.value = filaEnEdicion.fechaCumplimientoISO || input.value; // no dejar pisar la fecha ya cargada
+    hint.textContent = 'Bloqueada: el cumplimiento quedó registrado cuando llegó a depósito, no se puede cambiar acá';
+    hint.classList.add('hint-lock');
+  } else {
+    hint.textContent = 'Al completarla, las columnas de cumplimiento se recalculan solas';
+    hint.classList.remove('hint-lock');
+  }
+}
+
+document.getElementById('mEstado').addEventListener('change', actualizarBloqueoFechaCumplimiento);
 
 function cerrarModal() {
   document.getElementById('modalOverlay').classList.remove('open');
