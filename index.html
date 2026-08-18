@@ -203,6 +203,16 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
 .chart-card-title{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:12px}
 .chart-wrap{position:relative;height:300px}
 .chart-wrap-sm{position:relative;height:260px}
+.chart-desc{font-size:11px;color:var(--text3);margin-top:10px;padding-top:10px;border-top:1px solid var(--border);line-height:1.5}
+
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+@media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
+.kpi-x{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:14px}
+.kpi-x .lbl{font-size:11px;color:var(--text2);font-weight:700;margin-bottom:4px}
+.kpi-x .val{font-size:24px;font-weight:700;line-height:1;margin-bottom:8px}
+.kpi-x .desc{font-size:10.5px;color:var(--text3);line-height:1.4}
+.kpi-x.destacado{grid-column:span 2}
+.kpi-x.destacado .val{font-size:30px}
 
 /* LOG DE CAMBIOS */
 .log-table th{white-space:nowrap}
@@ -335,6 +345,7 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
   <div class="tabs">
     <div class="tab active" id="tab-btn-articulos" onclick="goToTab('articulos')"><i class="ti ti-table"></i> Artículos</div>
     <div class="tab" id="tab-btn-graficos" onclick="goToTab('graficos')"><i class="ti ti-chart-bar"></i> Gráficos</div>
+    <div class="tab" id="tab-btn-kpi" onclick="goToTab('kpi')"><i class="ti ti-report"></i> KPI</div>
     <div class="tab" id="tab-btn-informe" onclick="goToTab('informe')"><i class="ti ti-mail"></i> Informe</div>
     <div class="tab" id="tab-btn-trazabilidad" onclick="goToTab('trazabilidad')"><i class="ti ti-shield-check"></i> Trazabilidad</div>
     <div class="tab" id="tab-btn-log" onclick="goToTab('log')" style="display:none"><i class="ti ti-history"></i> Log de cambios</div>
@@ -401,6 +412,23 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
       <div class="chart-wrap-sm"><canvas id="chart-transferencia"></canvas></div>
     </div>
 
+  </div>
+
+  <!-- ===== TAB KPI ===== -->
+  <div class="tcontent" id="tab-kpi">
+    <div class="kpi-grid" id="kpiGridExtra"></div>
+
+    <div class="chart-card" style="margin-bottom:14px">
+      <div class="chart-card-title">Evolución mensual: ítems cargados vs. % Cumplidos + Cumplidos Depósito</div>
+      <div class="chart-wrap"><canvas id="chart-kpi-evolucion"></canvas></div>
+      <div class="chart-desc">Compara cuántos ítems se cargaron cada mes (barras) contra qué porcentaje de esos ítems ya está Cumplido o Cumplido en Depósito (línea). Sirve para ver si el ritmo de resolución acompaña al volumen de pedidos.</div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-card-title">% de ítems gestionados por Responsable</div>
+      <div class="chart-wrap"><canvas id="chart-kpi-responsable"></canvas></div>
+      <div class="chart-desc">Quiénes concentran la mayor cantidad de ítems, en porcentaje sobre el total filtrado. Ayuda a ver la carga de trabajo repartida entre el equipo de gestión.</div>
+    </div>
   </div>
 
   <!-- ===== TAB INFORME (repuestos en depósito, para el mail de fin de día) ===== -->
@@ -754,6 +782,7 @@ function goToTab(id) {
   document.getElementById('tab-' + id).classList.add('active');
 
   if (id === 'graficos') renderGraficos(pedidosFiltrados());
+  if (id === 'kpi') renderKPI(pedidosFiltrados());
   if (id === 'informe') renderInforme();
   if (id === 'trazabilidad') cargarTablaTrazabilidad();
   if (id === 'log') cargarLog();
@@ -978,6 +1007,7 @@ function onFiltrosChange() {
   const filtrados = pedidosFiltrados();
   renderTablero(filtrados);
   if (vistaActual === 'graficos') renderGraficos(filtrados);
+  if (vistaActual === 'kpi') renderKPI(filtrados);
   if (vistaActual === 'informe') renderInforme();
 }
 
@@ -1272,6 +1302,97 @@ function mkEvolucionMensual(canvasId, filtrados) {
       }
     }
   });
+}
+
+/*******************************************************
+ * TAB KPI
+ *******************************************************/
+function pct(n, total) {
+  return total ? Math.round(n / total * 1000) / 10 : 0;
+}
+
+function renderKPI(filtrados) {
+  const total = filtrados.length;
+
+  const kpiGrid = document.getElementById('kpiGridExtra');
+  if (!total) {
+    kpiGrid.innerHTML = '<div class="kpi-x destacado"><div class="lbl">Sin datos</div><div class="desc">No hay ítems que coincidan con los filtros actuales.</div></div>';
+    ['chart-kpi-evolucion','chart-kpi-responsable'].forEach(destruirChart);
+    return;
+  }
+
+  const nCumplidas = filtrados.filter(p => p.estado === 'CUMPLIDO').length;
+  const nCumplidasDeposito = filtrados.filter(p => p.estado === 'CUMPLIDO EN DEPOSITO').length;
+  const nTransferencia = filtrados.filter(p => String(p.transferencia || '').trim()).length;
+  const nPim = filtrados.filter(p => String(p.pim || '').trim()).length;
+  const nPendiente = filtrados.filter(p => esPendiente(p.estado)).length;
+  const nEnProceso = filtrados.filter(p => p.estado === 'EN PROCESO').length;
+  const nRechazado = filtrados.filter(p => p.estado === 'RECHAZADO').length;
+  const nConFecha = filtrados.filter(p => String(p.fechaCumplimiento || '').trim()).length;
+
+  const tarjetas = [
+    { destacado: true, lbl: '% Cumplidos + Cumplidos Depósito', val: pct(nCumplidas + nCumplidasDeposito, total), color: 'ok',
+      desc: 'Suma de Cumplidos y Cumplidos en Depósito: todo lo que ya está resuelto, retirado o esperando en depósito.' },
+    { lbl: '% Cumplidas', val: pct(nCumplidas, total), color: 'ok', desc: 'Ítems ya marcados como Cumplido sobre el total filtrado.' },
+    { lbl: '% Cumplidas Depósito', val: pct(nCumplidasDeposito, total), color: 'ok', desc: 'Llegaron a depósito pero todavía no se retiraron.' },
+    { lbl: '% Con Fecha de Cumplimiento', val: pct(nConFecha, total), color: '', desc: 'Ya tienen registrada la fecha real de recepción.' },
+    { lbl: '% Con Transferencia', val: pct(nTransferencia, total), color: '', desc: 'Ya tienen cargado un N° de Transferencia.' },
+    { lbl: '% Con PIM/SC', val: pct(nPim, total), color: '', desc: 'Ya tienen cargado un N° de PIM/SC.' },
+    { lbl: '% En Proceso', val: pct(nEnProceso, total), color: 'warn', desc: 'Se están gestionando actualmente.' },
+    { lbl: '% Pendiente', val: pct(nPendiente, total), color: 'warn', desc: 'Todavía sin estado cargado, o Pendiente/Reprogramado.' },
+    { lbl: '% Rechazados', val: pct(nRechazado, total), color: 'danger', desc: 'Ítems marcados como Rechazado sobre el total filtrado.' },
+  ];
+
+  const colorClase = { ok: 'color:var(--green)', warn: 'color:var(--amber)', danger: 'color:var(--red)', '': 'color:var(--text)' };
+  kpiGrid.innerHTML = tarjetas.map(t => `
+    <div class="kpi-x ${t.destacado ? 'destacado' : ''}">
+      <div class="lbl">${escapeHtml(t.lbl)}</div>
+      <div class="val" style="${colorClase[t.color]}">${t.val.toLocaleString('es-AR')}%</div>
+      <div class="desc">${escapeHtml(t.desc)}</div>
+    </div>
+  `).join('');
+
+  // ----- Gráfico 1: ítems por mes (barra) + % Cumplidos+CumplidosDepósito (línea) -----
+  destruirChart('chart-kpi-evolucion');
+  const ctxEvo = document.getElementById('chart-kpi-evolucion');
+  const porMes = {}; // { 'yyyy-mm': { total, resueltos } }
+  filtrados.forEach(p => {
+    const f = parseFechaDDMMYYYY(p.fechaPedido);
+    if (!f) return;
+    const key = f.getFullYear() + '-' + String(f.getMonth() + 1).padStart(2, '0');
+    if (!porMes[key]) porMes[key] = { total: 0, resueltos: 0 };
+    porMes[key].total++;
+    if (p.estado === 'CUMPLIDO' || p.estado === 'CUMPLIDO EN DEPOSITO') porMes[key].resueltos++;
+  });
+  const keysOrd = Object.keys(porMes).sort();
+  if (keysOrd.length && ctxEvo) {
+    const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    const labels = keysOrd.map(k => { const [a,m] = k.split('-'); return MESES[parseInt(m,10)-1] + ' ' + a; });
+    charts['chart-kpi-evolucion'] = new Chart(ctxEvo, {
+      data: {
+        labels,
+        datasets: [
+          { type: 'bar', label: 'Ítems', data: keysOrd.map(k => porMes[k].total), backgroundColor: '#e8e7e3', order: 2, yAxisID: 'yItems' },
+          { type: 'line', label: '% Cumplidos + Cumplidos Depósito', data: keysOrd.map(k => pct(porMes[k].resueltos, porMes[k].total)), borderColor: '#C00000', backgroundColor: '#C00000', tension: 0.3, order: 1, yAxisID: 'yPct' }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 10 } },
+          datalabels: { display: (ctx) => ctx.dataset.type === 'line', color: '#C00000', align: 'top', font: { size: 10, weight: 'bold' }, formatter: (v) => v + '%' }
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+          yItems: { position: 'left', beginAtZero: true, ticks: { font: { size: 10 }, precision: 0 }, title: { display: true, text: 'Ítems', font: { size: 10 } } },
+          yPct: { position: 'right', beginAtZero: true, max: 100, grid: { display: false }, ticks: { font: { size: 10 }, callback: (v) => v + '%' } }
+        }
+      }
+    });
+  }
+
+  // ----- Gráfico 2: % de ítems por responsable -----
+  mkBarTop10('chart-kpi-responsable', contarPor(filtrados, 'responsable'), total);
 }
 
 function renderGraficos(filtrados) {
