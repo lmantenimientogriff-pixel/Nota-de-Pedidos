@@ -191,6 +191,8 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
 .field .hint{font-size:10px;color:var(--text3);margin-top:4px}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+.traz-section{border-top:2px solid var(--rojo);margin-top:6px;padding-top:14px}
+.traz-titulo{font-size:12px;font-weight:700;color:var(--rojo);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;display:flex;align-items:center;gap:6px}
 .modal-info{background:var(--surface2);border-radius:var(--r);padding:10px 12px;margin-bottom:16px;font-size:11px;color:var(--text2);display:flex;flex-direction:column;gap:3px}
 
 /* GRÁFICOS */
@@ -334,6 +336,7 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
     <div class="tab active" id="tab-btn-articulos" onclick="goToTab('articulos')"><i class="ti ti-table"></i> Artículos</div>
     <div class="tab" id="tab-btn-graficos" onclick="goToTab('graficos')"><i class="ti ti-chart-bar"></i> Gráficos</div>
     <div class="tab" id="tab-btn-informe" onclick="goToTab('informe')"><i class="ti ti-mail"></i> Informe</div>
+    <div class="tab" id="tab-btn-trazabilidad" onclick="goToTab('trazabilidad')"><i class="ti ti-shield-check"></i> Trazabilidad</div>
     <div class="tab" id="tab-btn-log" onclick="goToTab('log')" style="display:none"><i class="ti ti-history"></i> Log de cambios</div>
     <div class="tab" id="tab-btn-usuarios" onclick="goToTab('usuarios')" style="display:none"><i class="ti ti-users"></i> Usuarios</div>
   </div>
@@ -420,6 +423,30 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
     <div id="informeContent"><div class="loading"><div class="spinner"></div>Cargando…</div></div>
   </div>
 
+  <!-- ===== TAB TRAZABILIDAD (matafuegos, izaje, enganche, superchupa) ===== -->
+  <div class="tcontent" id="tab-trazabilidad">
+    <div class="filters-bar" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+      <div class="fi" style="min-width:220px">
+        <label>Categoría</label>
+        <select id="filTrazCategoria" onchange="renderTrazabilidad()">
+          <option value="">Todas</option>
+          <option value="MATAFUEGO">Matafuego</option>
+          <option value="IZAJE">Elemento de izaje</option>
+          <option value="ENGANCHE">Perno de enganche</option>
+          <option value="SUPERCHUPA">Perno superchupa</option>
+        </select>
+      </div>
+      <div class="ebtns">
+        <button onclick="exportarTrazabilidadExcel()"><i class="ti ti-file-spreadsheet"></i> Excel</button>
+        <button class="primary" onclick="cargarTablaTrazabilidad()"><i class="ti ti-refresh"></i> Actualizar</button>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:10px">
+      Se carga automáticamente desde "Gestionar" cuando el Artículo de la nota se reconoce como matafuego, elemento de izaje, perno de enganche o perno superchupa. La clasificación por palabra clave todavía está en ajuste.
+    </div>
+    <div id="trazabilidadContent"><div class="loading"><div class="spinner"></div>Cargando…</div></div>
+  </div>
+
   <!-- ===== TAB LOG DE CAMBIOS (solo ADMINISTRADOR / PROPIETARIO) ===== -->
   <div class="tcontent" id="tab-log">
     <div class="tbl-card">
@@ -504,6 +531,44 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
     <div class="field">
       <label>Observaciones de depósito</label>
       <textarea id="mObsDeposito" placeholder="Notas internas de gestión"></textarea>
+    </div>
+
+    <div id="trazSection" class="traz-section" style="display:none">
+      <div class="traz-titulo" id="trazTitulo">Trazabilidad</div>
+      <div class="hint" style="margin-bottom:10px">Este artículo requiere trazabilidad. La Fecha de entrega se toma sola de la Fecha de Cumplimiento de arriba.</div>
+
+      <div class="row2">
+        <div class="field">
+          <label id="trazLabelEntrega">N° de elemento que entrega</label>
+          <input type="text" id="tNElementoEntrega">
+        </div>
+        <div class="field" id="trazCampoRecambio" style="display:none">
+          <label>N° de matafuego que recambia</label>
+          <input type="text" id="tNElementoRecambio">
+        </div>
+      </div>
+
+      <div class="row2" id="trazFilaVencimientos" style="display:none">
+        <div class="field">
+          <label>Fecha vencimiento recarga</label>
+          <input type="date" id="tFechaVencRecarga">
+        </div>
+        <div class="field">
+          <label>Fecha vencimiento prueba</label>
+          <input type="date" id="tFechaVencPrueba">
+        </div>
+      </div>
+
+      <div class="row2" id="trazFilaCertificacion" style="display:none">
+        <div class="field">
+          <label id="trazLabelCertificacion">Fecha de certificación</label>
+          <input type="date" id="tFechaCertificacion">
+        </div>
+        <div class="field" id="trazCampoCertificado" style="display:none">
+          <label>N° de certificado</label>
+          <input type="text" id="tNCertificado">
+        </div>
+      </div>
     </div>
 
     <div class="modal-actions">
@@ -663,6 +728,7 @@ function mostrarApp() {
   document.getElementById('tab-btn-usuarios').style.display = esAdmin ? 'flex' : 'none';
 
   cargarUsuarios(); // todos los roles la necesitan: alimenta el desplegable de Responsable
+  cargarTrazabilidad();
   cargarPedidos();
 }
 
@@ -689,6 +755,7 @@ function goToTab(id) {
 
   if (id === 'graficos') renderGraficos(pedidosFiltrados());
   if (id === 'informe') renderInforme();
+  if (id === 'trazabilidad') cargarTablaTrazabilidad();
   if (id === 'log') cargarLog();
   if (id === 'usuarios') cargarUsuarios();
 }
@@ -1280,6 +1347,7 @@ function abrirModal(fila) {
   document.getElementById('mObsDeposito').value = p.obsDeposito || '';
 
   actualizarBloqueoFechaCumplimiento();
+  actualizarSeccionTrazabilidad(p);
   document.getElementById('modalOverlay').classList.add('open');
 }
 
@@ -1308,6 +1376,147 @@ function actualizarBloqueoFechaCumplimiento() {
 }
 
 document.getElementById('mEstado').addEventListener('change', actualizarBloqueoFechaCumplimiento);
+
+/*******************************************************
+ * TRAZABILIDAD (matafuegos, izaje, enganche, superchupa)
+ *******************************************************/
+let trazabilidadCache = [];
+
+async function cargarTrazabilidad() {
+  try {
+    const data = await apiGet({ action: 'getTrazabilidad' });
+    trazabilidadCache = data.registros;
+  } catch (err) {
+    console.error('No se pudo cargar la trazabilidad:', err);
+  }
+}
+
+function isoDesdeDDMMYYYY(str) {
+  if (!str) return '';
+  const partes = str.split('/');
+  if (partes.length !== 3) return '';
+  return partes[2] + '-' + partes[1] + '-' + partes[0];
+}
+
+const NOMBRE_CATEGORIA_TRAZ = { MATAFUEGO: 'Matafuego', IZAJE: 'Elemento de izaje', ENGANCHE: 'Perno de enganche', SUPERCHUPA: 'Perno superchupa' };
+const LABEL_ENTREGA_TRAZ = { MATAFUEGO: 'N° de matafuego que entrega', IZAJE: 'N° de elemento', ENGANCHE: 'N° de elemento', SUPERCHUPA: 'N° de elemento' };
+
+function actualizarSeccionTrazabilidad(p) {
+  const cat = p.categoriaTrazabilidad;
+  const section = document.getElementById('trazSection');
+  if (!cat) { section.style.display = 'none'; return; }
+  section.style.display = 'block';
+
+  document.getElementById('trazTitulo').innerHTML = '<i class="ti ti-shield-check"></i> Trazabilidad — ' + (NOMBRE_CATEGORIA_TRAZ[cat] || cat);
+  document.getElementById('trazLabelEntrega').textContent = LABEL_ENTREGA_TRAZ[cat] || 'N° de elemento';
+  document.getElementById('trazCampoRecambio').style.display = cat === 'MATAFUEGO' ? 'block' : 'none';
+  document.getElementById('trazFilaVencimientos').style.display = cat === 'MATAFUEGO' ? 'grid' : 'none';
+  document.getElementById('trazFilaCertificacion').style.display = (cat === 'IZAJE' || cat === 'ENGANCHE' || cat === 'SUPERCHUPA') ? 'grid' : 'none';
+  document.getElementById('trazCampoCertificado').style.display = cat === 'IZAJE' ? 'block' : 'none';
+  document.getElementById('trazLabelCertificacion').textContent = cat === 'SUPERCHUPA' ? 'Fecha de certificación/ensayo' : 'Fecha de certificación';
+
+  const existente = trazabilidadCache.find(t => Number(t.filaOrigen) === p.fila && t.categoria === cat);
+  document.getElementById('tNElementoEntrega').value = existente ? (existente.nElementoEntrega || '') : '';
+  document.getElementById('tNElementoRecambio').value = existente ? (existente.nElementoRecambio || '') : '';
+  document.getElementById('tFechaVencRecarga').value = existente ? isoDesdeDDMMYYYY(existente.fechaVencRecarga) : '';
+  document.getElementById('tFechaVencPrueba').value = existente ? isoDesdeDDMMYYYY(existente.fechaVencPrueba) : '';
+  document.getElementById('tFechaCertificacion').value = existente ? isoDesdeDDMMYYYY(existente.fechaCertificacion) : '';
+  document.getElementById('tNCertificado').value = existente ? (existente.nCertificado || '') : '';
+}
+
+async function guardarTrazabilidadSiCorresponde(p) {
+  const cat = p.categoriaTrazabilidad;
+  if (!cat) return;
+
+  try {
+    await apiGet({
+      action: 'guardarTrazabilidad',
+      filaOrigen: p.fila,
+      np: p.np,
+      categoria: cat,
+      articulo: p.articulo,
+      destino: p.destino,
+      fechaEntrega: document.getElementById('mFechaCumplimiento').value, // fecha de cumplimiento = fecha de entrega
+      nElementoEntrega: document.getElementById('tNElementoEntrega').value.trim(),
+      nElementoRecambio: document.getElementById('tNElementoRecambio').value.trim(),
+      fechaVencRecarga: document.getElementById('tFechaVencRecarga').value,
+      fechaVencPrueba: document.getElementById('tFechaVencPrueba').value,
+      fechaCertificacion: document.getElementById('tFechaCertificacion').value,
+      nCertificado: document.getElementById('tNCertificado').value.trim(),
+      usuario: currentUser.usuario
+    });
+    cargarTrazabilidad(); // refresca el cache local con lo recién guardado
+  } catch (err) {
+    mostrarToast('El pedido se guardó, pero la trazabilidad no: ' + err.message, 'err');
+  }
+}
+
+/*******************************************************
+ * TAB TRAZABILIDAD
+ *******************************************************/
+async function cargarTablaTrazabilidad() {
+  const cont = document.getElementById('trazabilidadContent');
+  cont.innerHTML = '<div class="loading"><div class="spinner"></div>Cargando…</div>';
+  await cargarTrazabilidad();
+  renderTrazabilidad();
+}
+
+function renderTrazabilidad() {
+  const cont = document.getElementById('trazabilidadContent');
+  const filtroCategoria = document.getElementById('filTrazCategoria') ? document.getElementById('filTrazCategoria').value : '';
+  const registros = filtroCategoria ? trazabilidadCache.filter(r => r.categoria === filtroCategoria) : trazabilidadCache;
+
+  if (!registros.length) {
+    cont.innerHTML = '<div class="tbl-card"><div class="empty">Todavía no hay registros de trazabilidad cargados</div></div>';
+    return;
+  }
+
+  const filas = registros.map(r => `
+    <tr>
+      <td class="nowrap"><span class="pill p-otro">${escapeHtml(NOMBRE_CATEGORIA_TRAZ[r.categoria] || r.categoria)}</span></td>
+      <td class="nowrap">${escapeHtml(String(r.np))}</td>
+      <td style="white-space:normal;max-width:260px">${escapeHtml(r.articulo || '')}</td>
+      <td class="nowrap">${escapeHtml(r.destino || '—')}</td>
+      <td class="nowrap">${escapeHtml(r.nElementoEntrega || '—')}</td>
+      <td class="nowrap">${escapeHtml(r.nElementoRecambio || '—')}</td>
+      <td class="nowrap">${escapeHtml(r.fechaEntrega || '—')}</td>
+      <td class="nowrap">${escapeHtml(r.fechaVencRecarga || '—')}</td>
+      <td class="nowrap">${escapeHtml(r.fechaVencPrueba || '—')}</td>
+      <td class="nowrap">${escapeHtml(r.fechaCertificacion || '—')}</td>
+      <td class="nowrap">${escapeHtml(r.nCertificado || '—')}</td>
+      <td class="nowrap">${escapeHtml(r.usuario || '—')}</td>
+    </tr>
+  `).join('');
+
+  cont.innerHTML = `
+    <div class="tbl-card">
+      <div class="twrap" style="display:block">
+        <table>
+          <thead><tr>
+            <th>Categoría</th><th>N° NP</th><th>Artículo</th><th>Destino</th>
+            <th>N° Entrega</th><th>N° Recambio</th><th>F. Entrega</th>
+            <th>F. Venc. Recarga</th><th>F. Venc. Prueba</th><th>F. Certificación</th><th>N° Certificado</th><th>Usuario</th>
+          </tr></thead>
+          <tbody>${filas}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function exportarTrazabilidadExcel() {
+  if (!trazabilidadCache.length) { mostrarToast('No hay datos para exportar', 'err'); return; }
+  const filas = trazabilidadCache.map(r => ({
+    'Categoría': NOMBRE_CATEGORIA_TRAZ[r.categoria] || r.categoria, 'N° NP': r.np, 'Artículo': r.articulo, 'Destino': r.destino,
+    'N° Elemento Entrega': r.nElementoEntrega, 'N° Elemento Recambio': r.nElementoRecambio, 'Fecha Entrega': r.fechaEntrega,
+    'Fecha Venc. Recarga': r.fechaVencRecarga, 'Fecha Venc. Prueba': r.fechaVencPrueba,
+    'Fecha Certificación': r.fechaCertificacion, 'N° Certificado': r.nCertificado, 'Usuario': r.usuario, 'Fecha de carga': r.fechaCarga
+  }));
+  const ws = XLSX.utils.json_to_sheet(filas);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Trazabilidad');
+  XLSX.writeFile(wb, 'trazabilidad_' + new Date().toISOString().slice(0,10) + '.xlsx');
+}
 
 function cerrarModal() {
   document.getElementById('modalOverlay').classList.remove('open');
@@ -1370,6 +1579,10 @@ async function guardarEdicion() {
 
     const idx = pedidosCache.findIndex(x => x.fila === filaEnEdicion.fila);
     if (idx >= 0) pedidosCache[idx] = data.pedido;
+
+    if (filaEnEdicion.categoriaTrazabilidad) {
+      await guardarTrazabilidadSiCorresponde(filaEnEdicion);
+    }
 
     mostrarToast('Nota N° ' + data.pedido.np + ' actualizada', 'ok');
     cerrarModal();
