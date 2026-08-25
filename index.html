@@ -462,6 +462,8 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
           <option value="IZAJE">Elemento de izaje</option>
           <option value="ENGANCHE">Perno de enganche</option>
           <option value="SUPERCHUPA">Perno superchupa</option>
+          <option value="MANOVACUOMETRO">Manovacuómetro</option>
+          <option value="VALVULA_PSV">Válvula PSV</option>
         </select>
       </div>
       <div class="ebtns">
@@ -1536,8 +1538,8 @@ function isoDesdeDDMMYYYY(str) {
   return partes[2] + '-' + partes[1] + '-' + partes[0];
 }
 
-const NOMBRE_CATEGORIA_TRAZ = { MATAFUEGO: 'Matafuego', IZAJE: 'Elemento de izaje', ENGANCHE: 'Perno de enganche', SUPERCHUPA: 'Perno superchupa' };
-const LABEL_ENTREGA_TRAZ = { MATAFUEGO: 'N° de matafuego que entrega', IZAJE: 'N° de elemento', ENGANCHE: 'N° de elemento', SUPERCHUPA: 'N° de elemento' };
+const NOMBRE_CATEGORIA_TRAZ = { MATAFUEGO: 'Matafuego', IZAJE: 'Elemento de izaje', ENGANCHE: 'Perno de enganche', SUPERCHUPA: 'Perno superchupa', MANOVACUOMETRO: 'Manovacuómetro', VALVULA_PSV: 'Válvula PSV' };
+const LABEL_ENTREGA_TRAZ = { MATAFUEGO: 'N° de matafuego que entrega', IZAJE: 'N° de elemento', ENGANCHE: 'N° de elemento', SUPERCHUPA: 'N° de elemento', MANOVACUOMETRO: 'N° de elemento', VALVULA_PSV: 'N° de elemento' };
 
 function actualizarSeccionTrazabilidad(p, precargarValores) {
   const cat = p ? p.categoriaTrazabilidad : '';
@@ -1554,7 +1556,7 @@ function actualizarSeccionTrazabilidad(p, precargarValores) {
   document.getElementById('trazLabelEntrega').textContent = LABEL_ENTREGA_TRAZ[cat] || 'N° de elemento';
   document.getElementById('trazCampoRecambio').style.display = cat === 'MATAFUEGO' ? 'block' : 'none';
   document.getElementById('trazFilaVencimientos').style.display = cat === 'MATAFUEGO' ? 'grid' : 'none';
-  document.getElementById('trazFilaCertificacion').style.display = (cat === 'IZAJE' || cat === 'ENGANCHE' || cat === 'SUPERCHUPA') ? 'grid' : 'none';
+  document.getElementById('trazFilaCertificacion').style.display = (cat === 'IZAJE' || cat === 'ENGANCHE' || cat === 'SUPERCHUPA' || cat === 'MANOVACUOMETRO' || cat === 'VALVULA_PSV') ? 'grid' : 'none';
   document.getElementById('trazCampoCertificado').style.display = cat === 'IZAJE' ? 'block' : 'none';
   document.getElementById('trazLabelCertificacion').textContent = cat === 'SUPERCHUPA' ? 'Fecha de certificación/ensayo' : 'Fecha de certificación';
 
