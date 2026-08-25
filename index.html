@@ -565,7 +565,7 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
 
     <div id="trazSection" class="traz-section" style="display:none">
       <div class="traz-titulo" id="trazTitulo">Trazabilidad</div>
-      <div class="hint" style="margin-bottom:10px">Este artículo requiere trazabilidad. La Fecha de entrega se toma sola de la Fecha de Cumplimiento de arriba.</div>
+      <div class="hint" style="margin-bottom:10px">Este artículo requiere trazabilidad. Todos los campos de abajo son obligatorios para poder guardar en estado CUMPLIDO. La Fecha de entrega se toma sola de la Fecha de Cumplimiento de arriba.</div>
 
       <div class="row2">
         <div class="field">
@@ -1541,6 +1541,38 @@ function isoDesdeDDMMYYYY(str) {
 const NOMBRE_CATEGORIA_TRAZ = { MATAFUEGO: 'Matafuego', IZAJE: 'Elemento de izaje', ENGANCHE: 'Perno de enganche', SUPERCHUPA: 'Perno superchupa', MANOVACUOMETRO: 'Manovacuómetro', VALVULA_PSV: 'Válvula PSV' };
 const LABEL_ENTREGA_TRAZ = { MATAFUEGO: 'N° de matafuego que entrega', IZAJE: 'N° de elemento', ENGANCHE: 'N° de elemento', SUPERCHUPA: 'N° de elemento', MANOVACUOMETRO: 'N° de elemento', VALVULA_PSV: 'N° de elemento' };
 
+// Campos obligatorios por categoría cuando el Estado que se guarda es CUMPLIDO:
+// TODOS los campos que quedan visibles para esa categoría, sin excepción.
+const CAMPOS_OBLIGATORIOS_TRAZ = {
+  MATAFUEGO: [
+    { id: 'tNElementoEntrega', label: 'N° de matafuego que entrega' },
+    { id: 'tNElementoRecambio', label: 'N° de matafuego que recambia' },
+    { id: 'tFechaVencRecarga', label: 'Fecha vencimiento recarga' },
+    { id: 'tFechaVencPrueba', label: 'Fecha vencimiento prueba' }
+  ],
+  IZAJE: [
+    { id: 'tNElementoEntrega', label: 'N° de elemento' },
+    { id: 'tFechaCertificacion', label: 'Fecha de certificación' },
+    { id: 'tNCertificado', label: 'N° de certificado' }
+  ],
+  ENGANCHE: [
+    { id: 'tNElementoEntrega', label: 'N° de elemento' },
+    { id: 'tFechaCertificacion', label: 'Fecha de certificación' }
+  ],
+  SUPERCHUPA: [
+    { id: 'tNElementoEntrega', label: 'N° de elemento' },
+    { id: 'tFechaCertificacion', label: 'Fecha de certificación/ensayo' }
+  ],
+  MANOVACUOMETRO: [
+    { id: 'tNElementoEntrega', label: 'N° de elemento' },
+    { id: 'tFechaCertificacion', label: 'Fecha de certificación' }
+  ],
+  VALVULA_PSV: [
+    { id: 'tNElementoEntrega', label: 'N° de elemento' },
+    { id: 'tFechaCertificacion', label: 'Fecha de certificación' }
+  ]
+};
+
 function actualizarSeccionTrazabilidad(p, precargarValores) {
   const cat = p ? p.categoriaTrazabilidad : '';
   const estadoActual = document.getElementById('mEstado').value;
@@ -1703,6 +1735,17 @@ async function guardarEdicion() {
       return;
     }
     ordenCompraInput.value = 'NA';
+  }
+  if (estado === 'CUMPLIDO' && filaEnEdicion.categoriaTrazabilidad) {
+    const camposTraz = CAMPOS_OBLIGATORIOS_TRAZ[filaEnEdicion.categoriaTrazabilidad] || [];
+    for (const c of camposTraz) {
+      const input = document.getElementById(c.id);
+      if (!input.value.trim()) {
+        mostrarToast('Este artículo requiere trazabilidad: completá "' + c.label + '" antes de guardar', 'err');
+        input.focus();
+        return;
+      }
+    }
   }
 
   const btn = document.getElementById('btnGuardarModal');
