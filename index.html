@@ -1484,7 +1484,7 @@ function abrirModal(fila) {
   document.getElementById('mObsDeposito').value = p.obsDeposito || '';
 
   actualizarBloqueoFechaCumplimiento();
-  actualizarSeccionTrazabilidad(p);
+  actualizarSeccionTrazabilidad(p, true);
   document.getElementById('modalOverlay').classList.add('open');
 }
 
@@ -1513,6 +1513,7 @@ function actualizarBloqueoFechaCumplimiento() {
 }
 
 document.getElementById('mEstado').addEventListener('change', actualizarBloqueoFechaCumplimiento);
+document.getElementById('mEstado').addEventListener('change', () => actualizarSeccionTrazabilidad(filaEnEdicion, false));
 
 /*******************************************************
  * TRAZABILIDAD (matafuegos, izaje, enganche, superchupa)
@@ -1538,10 +1539,15 @@ function isoDesdeDDMMYYYY(str) {
 const NOMBRE_CATEGORIA_TRAZ = { MATAFUEGO: 'Matafuego', IZAJE: 'Elemento de izaje', ENGANCHE: 'Perno de enganche', SUPERCHUPA: 'Perno superchupa' };
 const LABEL_ENTREGA_TRAZ = { MATAFUEGO: 'N° de matafuego que entrega', IZAJE: 'N° de elemento', ENGANCHE: 'N° de elemento', SUPERCHUPA: 'N° de elemento' };
 
-function actualizarSeccionTrazabilidad(p) {
-  const cat = p.categoriaTrazabilidad;
+function actualizarSeccionTrazabilidad(p, precargarValores) {
+  const cat = p ? p.categoriaTrazabilidad : '';
+  const estadoActual = document.getElementById('mEstado').value;
   const section = document.getElementById('trazSection');
-  if (!cat) { section.style.display = 'none'; return; }
+
+  // Solo se pide/guarda trazabilidad cuando el pedido está CUMPLIDO — antes
+  // de eso (Pendiente, En Proceso, Cumplido en Depósito) o si se Rechaza,
+  // todavía no hay datos reales para cargar.
+  if (!cat || estadoActual !== 'CUMPLIDO') { section.style.display = 'none'; return; }
   section.style.display = 'block';
 
   document.getElementById('trazTitulo').innerHTML = '<i class="ti ti-shield-check"></i> Trazabilidad — ' + (NOMBRE_CATEGORIA_TRAZ[cat] || cat);
@@ -1552,6 +1558,9 @@ function actualizarSeccionTrazabilidad(p) {
   document.getElementById('trazCampoCertificado').style.display = cat === 'IZAJE' ? 'block' : 'none';
   document.getElementById('trazLabelCertificacion').textContent = cat === 'SUPERCHUPA' ? 'Fecha de certificación/ensayo' : 'Fecha de certificación';
 
+  // Los valores ya cargados solo se releen al abrir el modal, no cada vez que
+  // se toca el Estado (para no pisar lo que la persona ya tipeó en el ratito).
+  if (!precargarValores) return;
   const existente = trazabilidadCache.find(t => Number(t.filaOrigen) === p.fila && t.categoria === cat);
   document.getElementById('tNElementoEntrega').value = existente ? (existente.nElementoEntrega || '') : '';
   document.getElementById('tNElementoRecambio').value = existente ? (existente.nElementoRecambio || '') : '';
@@ -1718,7 +1727,7 @@ async function guardarEdicion() {
     const idx = pedidosCache.findIndex(x => x.fila === filaEnEdicion.fila);
     if (idx >= 0) pedidosCache[idx] = data.pedido;
 
-    if (filaEnEdicion.categoriaTrazabilidad) {
+    if (filaEnEdicion.categoriaTrazabilidad && estado === 'CUMPLIDO') {
       const valoresTraz = {
         fechaEntrega: document.getElementById('mFechaCumplimiento').value,
         nElementoEntrega: document.getElementById('tNElementoEntrega').value.trim(),
