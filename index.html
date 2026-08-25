@@ -809,7 +809,15 @@ function ordenarPorNP(pedidos) {
   });
 }
 
+let cargandoPedidos = false; // evita que dos cargas (ej: recién entrando + apretar Actualizar) se pisen entre sí
+
 async function cargarPedidos() {
+  if (cargandoPedidos) {
+    mostrarToast('Ya se está actualizando, esperá a que termine', 'err');
+    return;
+  }
+  cargandoPedidos = true;
+
   document.getElementById('tableroContent').innerHTML = '<div class="loading"><div class="spinner"></div>Cargando los últimos pedidos…</div>';
   mostrarPlaceholdersFiltros();
   cargaCompleta = false;
@@ -820,6 +828,7 @@ async function cargarPedidos() {
     onFiltrosChange();
   } catch (err) {
     document.getElementById('tableroContent').innerHTML = '<div class="empty">Error al cargar: ' + escapeHtml(err.message) + '</div>';
+    cargandoPedidos = false;
     return;
   }
   // Apenas se ve algo en pantalla, sigue solo con el resto del historial en
@@ -839,6 +848,8 @@ async function cargarRestoEnSegundoPlano() {
     console.error('No se pudo completar la carga en segundo plano:', err);
     cargaCompleta = true; // no reintenta solo; el usuario sigue viendo los recientes ya cargados
     actualizarModoVistaBar();
+  } finally {
+    cargandoPedidos = false; // recién ahora termina realmente todo el ciclo de carga
   }
 }
 
@@ -871,6 +882,7 @@ function poblarMultiselect(key, opciones) {
   msState[key] = new Set([...msState[key]].filter(v => opciones.includes(v)));
 
   const cont = document.getElementById('ms-' + key);
+  if (!cont) { console.error('No se encontró el contenedor del filtro "' + key + '" (ms-' + key + '), se lo salteó'); return; }
   if (!cont.dataset.init) {
     cont.dataset.init = '1';
     cont.innerHTML = `
@@ -894,6 +906,7 @@ function poblarMultiselect(key, opciones) {
 
 function renderMsOptions(key, opciones) {
   const cont = document.getElementById('msopts-' + key);
+  if (!cont) { console.error('No se encontró msopts-' + key); return; }
   if (!opciones.length) {
     cont.innerHTML = '<div class="ms-empty">Sin opciones</div>';
     return;
@@ -932,8 +945,11 @@ function msLimpiar(key) {
 
 function actualizarMsTexto(key) {
   const n = msState[key].size;
-  document.getElementById('mstext-' + key).textContent = n === 0 ? 'Todos' : n + ' seleccionado' + (n > 1 ? 's' : '');
-  document.getElementById('mstrigger-' + key).classList.toggle('active', n > 0);
+  const texto = document.getElementById('mstext-' + key);
+  const trigger = document.getElementById('mstrigger-' + key);
+  if (!texto || !trigger) { console.error('No se encontró mstext-' + key + ' o mstrigger-' + key); return; }
+  texto.textContent = n === 0 ? 'Todos' : n + ' seleccionado' + (n > 1 ? 's' : '');
+  trigger.classList.toggle('active', n > 0);
 }
 
 function toggleMs(key) {
@@ -1545,7 +1561,7 @@ function actualizarSeccionTrazabilidad(p) {
   document.getElementById('tNCertificado').value = existente ? (existente.nCertificado || '') : '';
 }
 
-async function guardarTrazabilidadSiCorresponde(p) {
+async function guardarTrazabilidadSiCorresponde(p, valores) {
   const cat = p.categoriaTrazabilidad;
   if (!cat) return;
 
@@ -1557,15 +1573,16 @@ async function guardarTrazabilidadSiCorresponde(p) {
       categoria: cat,
       articulo: p.articulo,
       destino: p.destino,
-      fechaEntrega: document.getElementById('mFechaCumplimiento').value, // fecha de cumplimiento = fecha de entrega
-      nElementoEntrega: document.getElementById('tNElementoEntrega').value.trim(),
-      nElementoRecambio: document.getElementById('tNElementoRecambio').value.trim(),
-      fechaVencRecarga: document.getElementById('tFechaVencRecarga').value,
-      fechaVencPrueba: document.getElementById('tFechaVencPrueba').value,
-      fechaCertificacion: document.getElementById('tFechaCertificacion').value,
-      nCertificado: document.getElementById('tNCertificado').value.trim(),
+      fechaEntrega: valores.fechaEntrega, // fecha de cumplimiento = fecha de entrega
+      nElementoEntrega: valores.nElementoEntrega,
+      nElementoRecambio: valores.nElementoRecambio,
+      fechaVencRecarga: valores.fechaVencRecarga,
+      fechaVencPrueba: valores.fechaVencPrueba,
+      fechaCertificacion: valores.fechaCertificacion,
+      nCertificado: valores.nCertificado,
       usuario: currentUser.usuario
     });
+    mostrarToast('Trazabilidad guardada', 'ok');
     cargarTrazabilidad(); // refresca el cache local con lo recién guardado
   } catch (err) {
     mostrarToast('El pedido se guardó, pero la trazabilidad no: ' + err.message, 'err');
@@ -1702,7 +1719,16 @@ async function guardarEdicion() {
     if (idx >= 0) pedidosCache[idx] = data.pedido;
 
     if (filaEnEdicion.categoriaTrazabilidad) {
-      await guardarTrazabilidadSiCorresponde(filaEnEdicion);
+      const valoresTraz = {
+        fechaEntrega: document.getElementById('mFechaCumplimiento').value,
+        nElementoEntrega: document.getElementById('tNElementoEntrega').value.trim(),
+        nElementoRecambio: document.getElementById('tNElementoRecambio').value.trim(),
+        fechaVencRecarga: document.getElementById('tFechaVencRecarga').value,
+        fechaVencPrueba: document.getElementById('tFechaVencPrueba').value,
+        fechaCertificacion: document.getElementById('tFechaCertificacion').value,
+        nCertificado: document.getElementById('tNCertificado').value.trim()
+      };
+      guardarTrazabilidadSiCorresponde(filaEnEdicion, valoresTraz); // en segundo plano, no bloquea el guardado del pedido
     }
 
     mostrarToast('Nota N° ' + data.pedido.np + ' actualizada', 'ok');
