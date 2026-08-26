@@ -134,12 +134,12 @@ input,select,textarea{font-family:inherit;color:var(--text);outline:none}
 .twrap::-webkit-scrollbar-thumb{background:var(--border2);border-radius:6px}
 .twrap::-webkit-scrollbar-thumb:hover{background:var(--text3)}
 table{width:100%;border-collapse:collapse;font-size:11px;table-layout:auto}
-th{text-align:left;padding:7px 8px;font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid var(--border);background:var(--surface2);white-space:nowrap}
+th{text-align:left;padding:7px 8px;font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid var(--border);background:var(--surface2);white-space:nowrap;position:sticky;top:52px;z-index:4}
 td{padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:middle}
 td.nowrap{white-space:nowrap}
 td.trunc{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:help}
 th:first-child,td:first-child{position:sticky;left:0;z-index:2;background:var(--surface);box-shadow:2px 0 5px rgba(0,0,0,.08)}
-th:first-child{background:var(--surface2);z-index:3}
+th:first-child{background:var(--surface2);z-index:5}
 tbody tr:hover td{background:var(--surface2)}
 tbody tr:hover td:first-child{background:var(--surface2)}
 tr.fila-descuento td{background:#FDECEC}
@@ -500,15 +500,23 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
           <input type="text" id="filMataPatente" oninput="renderMatafuegos()" placeholder="Buscar patente...">
         </div>
         <div class="fi">
-          <label>Estado de vencimiento</label>
-          <select id="filMataEstado" onchange="renderMatafuegos()">
+          <label>Estado Carga</label>
+          <select id="filMataEstadoCarga" onchange="renderMatafuegos()">
             <option value="">Todos</option>
             <option value="VIGENTE">Vigente</option>
-            <option value="CARGA VENCIDA">Carga Vencida</option>
-            <option value="PH VENCIDA">PH Vencida</option>
-            <option value="CARGA PRÓXIMA A VENCER (30 DÍAS)">Carga Próxima a vencer</option>
-            <option value="PH PRÓXIMA A VENCER (30 DÍAS)">PH Próxima a vencer</option>
-            <option value="CORROBORAR VENCIMIENTO">Corroborar Vencimiento</option>
+            <option value="VENCIDA">Vencida</option>
+            <option value="PRÓXIMA A VENCER (30 DÍAS)">Próxima a vencer</option>
+            <option value="CORROBORAR">Corroborar</option>
+          </select>
+        </div>
+        <div class="fi">
+          <label>Estado PH</label>
+          <select id="filMataEstadoPH" onchange="renderMatafuegos()">
+            <option value="">Todos</option>
+            <option value="VIGENTE">Vigente</option>
+            <option value="VENCIDA">Vencida</option>
+            <option value="PRÓXIMA A VENCER (30 DÍAS)">Próxima a vencer</option>
+            <option value="CORROBORAR">Corroborar</option>
           </select>
         </div>
       </div>
@@ -1880,11 +1888,9 @@ function exportarTrazabilidadExcel() {
  *******************************************************/
 const ESTILO_ESTADO_MATA = {
   'VIGENTE': 'p-cumplido',
-  'CARGA VENCIDA': 'p-rechazado',
-  'PH VENCIDA': 'p-rechazado',
-  'CARGA PRÓXIMA A VENCER (30 DÍAS)': 'p-proceso',
-  'PH PRÓXIMA A VENCER (30 DÍAS)': 'p-proceso',
-  'CORROBORAR VENCIMIENTO': 'p-otro'
+  'VENCIDA': 'p-rechazado',
+  'PRÓXIMA A VENCER (30 DÍAS)': 'p-proceso',
+  'CORROBORAR': 'p-otro'
 };
 
 async function cargarTablaMatafuegos() {
@@ -1897,28 +1903,37 @@ async function cargarTablaMatafuegos() {
 function matafuegosFiltrados() {
   const numero = document.getElementById('filMataNumero').value.trim().toLowerCase();
   const patente = document.getElementById('filMataPatente').value.trim().toLowerCase();
-  const estado = document.getElementById('filMataEstado').value;
+  const estadoCarga = document.getElementById('filMataEstadoCarga').value;
+  const estadoPH = document.getElementById('filMataEstadoPH').value;
   return matafuegosCache.filter(m => {
     if (numero && !m.nMatafuego.toLowerCase().includes(numero)) return false;
     if (patente && !String(m.patente || '').toLowerCase().includes(patente)) return false;
-    if (estado && m.estadoVencimiento !== estado) return false;
+    if (estadoCarga && m.estadoCarga !== estadoCarga) return false;
+    if (estadoPH && m.estadoPH !== estadoPH) return false;
     return true;
   });
+}
+
+function pillEstadoMata(etiqueta, estado) {
+  return `<span class="pill ${ESTILO_ESTADO_MATA[estado] || 'p-otro'}">${escapeHtml(etiqueta)}: ${escapeHtml(estado)}</span>`;
 }
 
 function renderMatafuegos() {
   const registros = matafuegosFiltrados();
 
   const kpiDefs = [
-    { estado: '', lbl: 'Total', color: '' },
-    { estado: 'VIGENTE', lbl: 'Vigentes', color: 'ok' },
-    { estado: 'CARGA VENCIDA', lbl: 'Carga Vencida', color: 'danger' },
-    { estado: 'PH VENCIDA', lbl: 'PH Vencida', color: 'danger' },
-    { estado: 'CARGA PRÓXIMA A VENCER (30 DÍAS)', lbl: 'Carga por vencer', color: 'warn' },
-    { estado: 'PH PRÓXIMA A VENCER (30 DÍAS)', lbl: 'PH por vencer', color: 'warn' },
+    { campo: '', valor: '', lbl: 'Total', color: '' },
+    { campo: 'ambos', valor: 'VIGENTE', lbl: 'Ambos Vigentes', color: 'ok' },
+    { campo: 'estadoCarga', valor: 'VENCIDA', lbl: 'Carga Vencida', color: 'danger' },
+    { campo: 'estadoPH', valor: 'VENCIDA', lbl: 'PH Vencida', color: 'danger' },
+    { campo: 'estadoCarga', valor: 'PRÓXIMA A VENCER (30 DÍAS)', lbl: 'Carga por vencer', color: 'warn' },
+    { campo: 'estadoPH', valor: 'PRÓXIMA A VENCER (30 DÍAS)', lbl: 'PH por vencer', color: 'warn' },
   ];
   document.getElementById('kpisMatafuegos').innerHTML = kpiDefs.map(k => {
-    const cantidad = k.estado ? registros.filter(m => m.estadoVencimiento === k.estado).length : registros.length;
+    let cantidad;
+    if (!k.campo) cantidad = registros.length;
+    else if (k.campo === 'ambos') cantidad = registros.filter(m => m.estadoCarga === k.valor && m.estadoPH === k.valor).length;
+    else cantidad = registros.filter(m => m[k.campo] === k.valor).length;
     return `<div class="kpi ${k.color}"><div class="lbl">${escapeHtml(k.lbl)}</div><div class="val">${cantidad}</div></div>`;
   }).join('');
 
@@ -1935,7 +1950,7 @@ function renderMatafuegos() {
       <td class="nowrap">${escapeHtml(m.tipo || '—')}</td>
       <td class="nowrap">${escapeHtml(m.vencCarga || '—')}</td>
       <td class="nowrap">${escapeHtml(m.vencPH || '—')}</td>
-      <td class="nowrap"><span class="pill ${ESTILO_ESTADO_MATA[m.estadoVencimiento] || 'p-otro'}">${escapeHtml(m.estadoVencimiento)}</span></td>
+      <td class="nowrap">${pillEstadoMata('Carga', m.estadoCarga)}<div class="subline" style="margin-top:4px">${pillEstadoMata('PH', m.estadoPH)}</div></td>
       <td class="nowrap">${escapeHtml(m.patente || '—')}</td>
       <td class="mata-obs">${escapeHtml(m.observaciones || '—')}</td>
       <td class="nowrap"><button class="btn-edit" onclick="abrirModalMatafuego(${m.fila})"><i class="ti ti-edit"></i> Editar</button></td>
@@ -1948,7 +1963,7 @@ function renderMatafuegos() {
         <table>
           <thead><tr>
             <th>N° Matafuego</th><th>Capacidad Kg</th><th>Tipo</th><th>Venc. Carga</th><th>Venc. PH</th>
-            <th>Estado de vencimiento</th><th>Patente</th><th>Observaciones</th><th></th>
+            <th>Estado (Carga / PH)</th><th>Patente</th><th>Observaciones</th><th></th>
           </tr></thead>
           <tbody>${filas}</tbody>
         </table>
@@ -1962,7 +1977,7 @@ function exportarMatafuegosExcel() {
   if (!registros.length) { mostrarToast('No hay datos para exportar', 'err'); return; }
   const filas = registros.map(m => ({
     'N° Matafuego': m.nMatafuego, 'Capacidad Kg': m.capacidadKg, 'Tipo': m.tipo,
-    'Venc. Carga': m.vencCarga, 'Venc. PH': m.vencPH, 'Estado de vencimiento': m.estadoVencimiento,
+    'Venc. Carga': m.vencCarga, 'Venc. PH': m.vencPH, 'Estado Carga': m.estadoCarga, 'Estado PH': m.estadoPH,
     'Patente': m.patente, 'Observaciones': m.observaciones
   }));
   const ws = XLSX.utils.json_to_sheet(filas);
