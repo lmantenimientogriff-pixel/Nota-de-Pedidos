@@ -198,6 +198,10 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
 .traz-alerta-titulo{font-size:12px;font-weight:700;color:var(--amber-text);display:flex;align-items:center;gap:6px;margin-bottom:4px}
 .traz-check{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--amber-text);font-weight:600;cursor:pointer;margin-top:6px}
 .traz-check input{width:16px;height:16px;accent-color:var(--amber);cursor:pointer}
+
+#kpisMatafuegos .kpi .lbl,#kpisMatafuegos .kpi .val{text-align:center}
+#matafuegosContent th,#matafuegosContent td{text-align:center}
+#matafuegosContent td.mata-obs{white-space:normal;max-width:220px}
 .modal-info{background:var(--surface2);border-radius:var(--r);padding:10px 12px;margin-bottom:16px;font-size:11px;color:var(--text2);display:flex;flex-direction:column;gap:3px}
 
 /* GRÁFICOS */
@@ -713,6 +717,34 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
     <div class="modal-actions">
       <button onclick="cerrarModalUsuario()">Cancelar</button>
       <button class="primary" id="btnGuardarUsuario" onclick="guardarUsuario()"><i class="ti ti-device-floppy"></i> Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DE EDICIÓN DE MATAFUEGO (solo Venc. Carga, Venc. PH, Observaciones) -->
+<div class="modal-overlay" id="mataModalOverlay">
+  <div class="modal">
+    <div class="modal-title"><i class="ti ti-fire-extinguisher"></i> Editar matafuego</div>
+    <div class="modal-sub" id="mataModalSub">—</div>
+
+    <div class="row2">
+      <div class="field">
+        <label>Fecha vencimiento carga</label>
+        <input type="date" id="mataVencCarga">
+      </div>
+      <div class="field">
+        <label>Fecha vencimiento PH</label>
+        <input type="date" id="mataVencPH">
+      </div>
+    </div>
+    <div class="field">
+      <label>Observaciones</label>
+      <textarea id="mataObservaciones" placeholder="Notas sobre este matafuego"></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button onclick="cerrarModalMatafuego()">Cancelar</button>
+      <button class="primary" id="btnGuardarMatafuego" onclick="guardarMatafuego()"><i class="ti ti-device-floppy"></i> Guardar</button>
     </div>
   </div>
 </div>
@@ -1875,13 +1907,14 @@ function renderMatafuegos() {
   const filas = registros.map(m => `
     <tr>
       <td class="nowrap"><strong>${escapeHtml(m.nMatafuego)}</strong></td>
-      <td class="nowrap" style="text-align:center">${escapeHtml(String(m.capacidadKg || '—'))}</td>
+      <td class="nowrap">${escapeHtml(String(m.capacidadKg || '—'))}</td>
       <td class="nowrap">${escapeHtml(m.tipo || '—')}</td>
       <td class="nowrap">${escapeHtml(m.vencCarga || '—')}</td>
       <td class="nowrap">${escapeHtml(m.vencPH || '—')}</td>
       <td class="nowrap"><span class="pill ${ESTILO_ESTADO_MATA[m.estadoVencimiento] || 'p-otro'}">${escapeHtml(m.estadoVencimiento)}</span></td>
       <td class="nowrap">${escapeHtml(m.patente || '—')}</td>
-      <td style="white-space:normal;max-width:220px">${escapeHtml(m.observaciones || '')}</td>
+      <td class="mata-obs">${escapeHtml(m.observaciones || '—')}</td>
+      <td class="nowrap"><button class="btn-edit" onclick="abrirModalMatafuego(${m.fila})"><i class="ti ti-edit"></i> Editar</button></td>
     </tr>
   `).join('');
 
@@ -1891,7 +1924,7 @@ function renderMatafuegos() {
         <table>
           <thead><tr>
             <th>N° Matafuego</th><th>Capacidad Kg</th><th>Tipo</th><th>Venc. Carga</th><th>Venc. PH</th>
-            <th>Estado de vencimiento</th><th>Patente</th><th>Observaciones</th>
+            <th>Estado de vencimiento</th><th>Patente</th><th>Observaciones</th><th></th>
           </tr></thead>
           <tbody>${filas}</tbody>
         </table>
@@ -1913,6 +1946,56 @@ function exportarMatafuegosExcel() {
   XLSX.utils.book_append_sheet(wb, ws, 'Matafuegos');
   XLSX.writeFile(wb, 'matafuegos_' + new Date().toISOString().slice(0,10) + '.xlsx');
 }
+
+let matafuegoEnEdicion = null;
+
+function abrirModalMatafuego(fila) {
+  const m = matafuegosCache.find(x => x.fila === fila);
+  if (!m) return;
+  matafuegoEnEdicion = m;
+
+  document.getElementById('mataModalSub').textContent = 'N° ' + m.nMatafuego + ' · ' + (m.tipo || '—') + ' · ' + (m.capacidadKg || '—') + ' Kg';
+  document.getElementById('mataVencCarga').value = isoDesdeDDMMYYYY(m.vencCarga);
+  document.getElementById('mataVencPH').value = isoDesdeDDMMYYYY(m.vencPH);
+  document.getElementById('mataObservaciones').value = m.observaciones || '';
+
+  document.getElementById('mataModalOverlay').classList.add('open');
+}
+
+function cerrarModalMatafuego() {
+  document.getElementById('mataModalOverlay').classList.remove('open');
+  matafuegoEnEdicion = null;
+}
+
+async function guardarMatafuego() {
+  if (!matafuegoEnEdicion) return;
+  const btn = document.getElementById('btnGuardarMatafuego');
+  btn.disabled = true;
+  btn.textContent = 'Guardando…';
+
+  try {
+    await apiGet({
+      action: 'actualizarMatafuego',
+      fila: matafuegoEnEdicion.fila,
+      vencCarga: document.getElementById('mataVencCarga').value,
+      vencPH: document.getElementById('mataVencPH').value,
+      observaciones: document.getElementById('mataObservaciones').value.trim()
+    });
+    mostrarToast('Matafuego actualizado', 'ok');
+    cerrarModalMatafuego();
+    await cargarMatafuegos();
+    renderMatafuegos();
+  } catch (err) {
+    mostrarToast('Error al guardar: ' + err.message, 'err');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ti ti-device-floppy"></i> Guardar';
+  }
+}
+
+document.getElementById('mataModalOverlay').addEventListener('click', (ev) => {
+  if (ev.target.id === 'mataModalOverlay') cerrarModalMatafuego();
+});
 
 function cerrarModal() {
   document.getElementById('modalOverlay').classList.remove('open');
