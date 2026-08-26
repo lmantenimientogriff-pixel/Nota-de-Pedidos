@@ -133,7 +133,7 @@ input,select,textarea{font-family:inherit;color:var(--text);outline:none}
 .twrap::-webkit-scrollbar-track{background:var(--surface2)}
 .twrap::-webkit-scrollbar-thumb{background:var(--border2);border-radius:6px}
 .twrap::-webkit-scrollbar-thumb:hover{background:var(--text3)}
-table{width:100%;border-collapse:collapse;font-size:11px;table-layout:auto}
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:11px;table-layout:auto}
 th{text-align:left;padding:7px 8px;font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid var(--border);background:var(--surface2);white-space:nowrap;position:sticky;top:52px;z-index:4}
 td{padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:middle}
 td.nowrap{white-space:nowrap}
@@ -200,6 +200,8 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
 .traz-check input{width:16px;height:16px;accent-color:var(--amber);cursor:pointer}
 
 #kpisMatafuegos .kpi .lbl,#kpisMatafuegos .kpi .val{text-align:center}
+.mata-kpi-titulo{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin:12px 0 8px}
+.mata-kpi-titulo:first-child{margin-top:0}
 #matafuegosContent th,#matafuegosContent td{text-align:center}
 #matafuegosContent td.mata-obs{white-space:normal;max-width:220px}
 .modal-info{background:var(--surface2);border-radius:var(--r);padding:10px 12px;margin-bottom:16px;font-size:11px;color:var(--text2);display:flex;flex-direction:column;gap:3px}
@@ -527,7 +529,7 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
       </div>
     </div>
 
-    <div class="kpis" id="kpisMatafuegos" style="grid-template-columns:repeat(6,1fr)"></div>
+    <div id="kpisMatafuegos"></div>
 
     <div id="matafuegosContent"><div class="loading"><div class="spinner"></div>Cargando…</div></div>
   </div>
@@ -1920,22 +1922,24 @@ function pillEstadoMata(etiqueta, estado) {
 
 function renderMatafuegos() {
   const registros = matafuegosFiltrados();
+  const total = registros.length;
 
-  const kpiDefs = [
-    { campo: '', valor: '', lbl: 'Total', color: '' },
-    { campo: 'ambos', valor: 'VIGENTE', lbl: 'Ambos Vigentes', color: 'ok' },
-    { campo: 'estadoCarga', valor: 'VENCIDA', lbl: 'Carga Vencida', color: 'danger' },
-    { campo: 'estadoPH', valor: 'VENCIDA', lbl: 'PH Vencida', color: 'danger' },
-    { campo: 'estadoCarga', valor: 'PRÓXIMA A VENCER (30 DÍAS)', lbl: 'Carga por vencer', color: 'warn' },
-    { campo: 'estadoPH', valor: 'PRÓXIMA A VENCER (30 DÍAS)', lbl: 'PH por vencer', color: 'warn' },
-  ];
-  document.getElementById('kpisMatafuegos').innerHTML = kpiDefs.map(k => {
-    let cantidad;
-    if (!k.campo) cantidad = registros.length;
-    else if (k.campo === 'ambos') cantidad = registros.filter(m => m.estadoCarga === k.valor && m.estadoPH === k.valor).length;
-    else cantidad = registros.filter(m => m[k.campo] === k.valor).length;
-    return `<div class="kpi ${k.color}"><div class="lbl">${escapeHtml(k.lbl)}</div><div class="val">${cantidad}</div></div>`;
-  }).join('');
+  function grupoKpi(titulo, campo, colorPorValor) {
+    const valores = ['VIGENTE', 'VENCIDA', 'PRÓXIMA A VENCER (30 DÍAS)', 'CORROBORAR'];
+    const etiquetas = { 'VIGENTE': 'Vigente', 'VENCIDA': 'Vencida', 'PRÓXIMA A VENCER (30 DÍAS)': 'Próxima a vencer', 'CORROBORAR': 'Corroborar' };
+    const tarjetas = valores.map(v => {
+      const cantidad = registros.filter(m => m[campo] === v).length;
+      return `<div class="kpi ${colorPorValor[v]}"><div class="lbl">${escapeHtml(etiquetas[v])}</div><div class="val">${cantidad}</div></div>`;
+    }).join('');
+    return `<div class="mata-kpi-titulo">${escapeHtml(titulo)} — suma ${total} en total</div><div class="kpis" style="grid-template-columns:repeat(4,1fr)">${tarjetas}</div>`;
+  }
+
+  const colores = { 'VIGENTE': 'ok', 'VENCIDA': 'danger', 'PRÓXIMA A VENCER (30 DÍAS)': 'warn', 'CORROBORAR': '' };
+
+  document.getElementById('kpisMatafuegos').innerHTML =
+    `<div class="kpis" style="grid-template-columns:1fr;margin-bottom:12px"><div class="kpi"><div class="lbl">Total de matafuegos (con los filtros actuales)</div><div class="val">${total}</div></div></div>` +
+    grupoKpi('Estado de Carga', 'estadoCarga', colores) +
+    grupoKpi('Estado de PH', 'estadoPH', colores);
 
   const cont = document.getElementById('matafuegosContent');
   if (!registros.length) {
