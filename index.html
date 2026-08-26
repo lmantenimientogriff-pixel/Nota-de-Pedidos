@@ -514,7 +514,8 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
       </div>
       <div class="ebtns">
         <button onclick="exportarMatafuegosExcel()"><i class="ti ti-file-spreadsheet"></i> Excel</button>
-        <button class="primary" onclick="cargarTablaMatafuegos()"><i class="ti ti-refresh"></i> Actualizar</button>
+        <button onclick="cargarTablaMatafuegos()"><i class="ti ti-refresh"></i> Actualizar</button>
+        <button class="primary" onclick="abrirModalMatafuegoNuevo()"><i class="ti ti-fire-extinguisher"></i> Nuevo matafuego</button>
       </div>
     </div>
 
@@ -724,8 +725,31 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
 <!-- MODAL DE EDICIÓN DE MATAFUEGO (solo Venc. Carga, Venc. PH, Observaciones) -->
 <div class="modal-overlay" id="mataModalOverlay">
   <div class="modal">
-    <div class="modal-title"><i class="ti ti-fire-extinguisher"></i> Editar matafuego</div>
+    <div class="modal-title" id="mataModalTitulo"><i class="ti ti-fire-extinguisher"></i> Editar matafuego</div>
     <div class="modal-sub" id="mataModalSub">—</div>
+
+    <div id="mataCamposNuevo" style="display:none">
+      <div class="row2">
+        <div class="field">
+          <label>N° de Matafuego</label>
+          <input type="text" id="mataNumero" placeholder="Ej: 819163">
+        </div>
+        <div class="field">
+          <label>Capacidad (Kg)</label>
+          <input type="text" id="mataCapacidadKg" placeholder="Ej: 10">
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Tipo</label>
+          <input type="text" id="mataTipo" placeholder="Ej: ABC">
+        </div>
+        <div class="field">
+          <label>Patente</label>
+          <input type="text" id="mataPatente" placeholder="Opcional">
+        </div>
+      </div>
+    </div>
 
     <div class="row2">
       <div class="field">
@@ -1948,16 +1972,38 @@ function exportarMatafuegosExcel() {
 }
 
 let matafuegoEnEdicion = null;
+let modoModalMatafuego = 'editar'; // 'editar' | 'nuevo'
 
 function abrirModalMatafuego(fila) {
   const m = matafuegosCache.find(x => x.fila === fila);
   if (!m) return;
   matafuegoEnEdicion = m;
+  modoModalMatafuego = 'editar';
 
+  document.getElementById('mataModalTitulo').innerHTML = '<i class="ti ti-fire-extinguisher"></i> Editar matafuego';
+  document.getElementById('mataCamposNuevo').style.display = 'none';
   document.getElementById('mataModalSub').textContent = 'N° ' + m.nMatafuego + ' · ' + (m.tipo || '—') + ' · ' + (m.capacidadKg || '—') + ' Kg';
   document.getElementById('mataVencCarga').value = isoDesdeDDMMYYYY(m.vencCarga);
   document.getElementById('mataVencPH').value = isoDesdeDDMMYYYY(m.vencPH);
   document.getElementById('mataObservaciones').value = m.observaciones || '';
+
+  document.getElementById('mataModalOverlay').classList.add('open');
+}
+
+function abrirModalMatafuegoNuevo() {
+  matafuegoEnEdicion = null;
+  modoModalMatafuego = 'nuevo';
+
+  document.getElementById('mataModalTitulo').innerHTML = '<i class="ti ti-fire-extinguisher"></i> Nuevo matafuego';
+  document.getElementById('mataCamposNuevo').style.display = 'block';
+  document.getElementById('mataModalSub').textContent = 'Se agrega como un registro nuevo en la pestaña Matafuegos';
+  document.getElementById('mataNumero').value = '';
+  document.getElementById('mataCapacidadKg').value = '';
+  document.getElementById('mataTipo').value = '';
+  document.getElementById('mataPatente').value = '';
+  document.getElementById('mataVencCarga').value = '';
+  document.getElementById('mataVencPH').value = '';
+  document.getElementById('mataObservaciones').value = '';
 
   document.getElementById('mataModalOverlay').classList.add('open');
 }
@@ -1968,20 +2014,36 @@ function cerrarModalMatafuego() {
 }
 
 async function guardarMatafuego() {
-  if (!matafuegoEnEdicion) return;
   const btn = document.getElementById('btnGuardarMatafuego');
   btn.disabled = true;
   btn.textContent = 'Guardando…';
 
   try {
-    await apiGet({
-      action: 'actualizarMatafuego',
-      fila: matafuegoEnEdicion.fila,
-      vencCarga: document.getElementById('mataVencCarga').value,
-      vencPH: document.getElementById('mataVencPH').value,
-      observaciones: document.getElementById('mataObservaciones').value.trim()
-    });
-    mostrarToast('Matafuego actualizado', 'ok');
+    if (modoModalMatafuego === 'nuevo') {
+      const numero = document.getElementById('mataNumero').value.trim();
+      if (!numero) { mostrarToast('Ingresá el N° de matafuego', 'err'); btn.disabled = false; btn.innerHTML = '<i class="ti ti-device-floppy"></i> Guardar'; return; }
+      await apiGet({
+        action: 'crearMatafuego',
+        nMatafuego: numero,
+        capacidadKg: document.getElementById('mataCapacidadKg').value.trim(),
+        tipo: document.getElementById('mataTipo').value.trim(),
+        patente: document.getElementById('mataPatente').value.trim(),
+        vencCarga: document.getElementById('mataVencCarga').value,
+        vencPH: document.getElementById('mataVencPH').value,
+        observaciones: document.getElementById('mataObservaciones').value.trim()
+      });
+      mostrarToast('Matafuego creado', 'ok');
+    } else {
+      if (!matafuegoEnEdicion) return;
+      await apiGet({
+        action: 'actualizarMatafuego',
+        fila: matafuegoEnEdicion.fila,
+        vencCarga: document.getElementById('mataVencCarga').value,
+        vencPH: document.getElementById('mataVencPH').value,
+        observaciones: document.getElementById('mataObservaciones').value.trim()
+      });
+      mostrarToast('Matafuego actualizado', 'ok');
+    }
     cerrarModalMatafuego();
     await cargarMatafuegos();
     renderMatafuegos();
