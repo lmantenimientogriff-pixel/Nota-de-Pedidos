@@ -193,6 +193,11 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
 .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
 .traz-section{border-top:2px solid var(--rojo);margin-top:6px;padding-top:14px}
 .traz-titulo{font-size:12px;font-weight:700;color:var(--rojo);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.traz-info-registrado{background:var(--green-bg);color:var(--green-text);border-radius:var(--r);padding:9px 12px;font-size:12px;margin-top:4px;display:flex;align-items:center;gap:7px}
+.traz-alerta-nuevo{background:var(--amber-bg);border:1px solid var(--amber);border-radius:var(--r);padding:12px 14px;margin-top:8px}
+.traz-alerta-titulo{font-size:12px;font-weight:700;color:var(--amber-text);display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.traz-check{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--amber-text);font-weight:600;cursor:pointer;margin-top:6px}
+.traz-check input{width:16px;height:16px;accent-color:var(--amber);cursor:pointer}
 .modal-info{background:var(--surface2);border-radius:var(--r);padding:10px 12px;margin-bottom:16px;font-size:11px;color:var(--text2);display:flex;flex-direction:column;gap:3px}
 
 /* GRÁFICOS */
@@ -348,6 +353,7 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
     <div class="tab" id="tab-btn-kpi" onclick="goToTab('kpi')"><i class="ti ti-report"></i> KPI</div>
     <div class="tab" id="tab-btn-informe" onclick="goToTab('informe')"><i class="ti ti-mail"></i> Informe</div>
     <div class="tab" id="tab-btn-trazabilidad" onclick="goToTab('trazabilidad')"><i class="ti ti-shield-check"></i> Trazabilidad</div>
+    <div class="tab" id="tab-btn-matafuegos" onclick="goToTab('matafuegos')"><i class="ti ti-fire-extinguisher"></i> Matafuegos</div>
     <div class="tab" id="tab-btn-log" onclick="goToTab('log')" style="display:none"><i class="ti ti-history"></i> Log de cambios</div>
     <div class="tab" id="tab-btn-usuarios" onclick="goToTab('usuarios')" style="display:none"><i class="ti ti-users"></i> Usuarios</div>
   </div>
@@ -477,6 +483,42 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
     <div id="trazabilidadContent"><div class="loading"><div class="spinner"></div>Cargando…</div></div>
   </div>
 
+  <!-- ===== TAB MATAFUEGOS (registro maestro con vencimientos) ===== -->
+  <div class="tcontent" id="tab-matafuegos">
+    <div class="filters-bar" style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px">
+      <div class="fgrid" style="flex:1">
+        <div class="fi">
+          <label>N° de Matafuego</label>
+          <input type="text" id="filMataNumero" oninput="renderMatafuegos()" placeholder="Buscar N°...">
+        </div>
+        <div class="fi">
+          <label>Patente</label>
+          <input type="text" id="filMataPatente" oninput="renderMatafuegos()" placeholder="Buscar patente...">
+        </div>
+        <div class="fi">
+          <label>Estado de vencimiento</label>
+          <select id="filMataEstado" onchange="renderMatafuegos()">
+            <option value="">Todos</option>
+            <option value="VIGENTE">Vigente</option>
+            <option value="CARGA VENCIDA">Carga Vencida</option>
+            <option value="PH VENCIDA">PH Vencida</option>
+            <option value="CARGA PRÓXIMA A VENCER (30 DÍAS)">Carga Próxima a vencer</option>
+            <option value="PH PRÓXIMA A VENCER (30 DÍAS)">PH Próxima a vencer</option>
+            <option value="CORROBORAR VENCIMIENTO">Corroborar Vencimiento</option>
+          </select>
+        </div>
+      </div>
+      <div class="ebtns">
+        <button onclick="exportarMatafuegosExcel()"><i class="ti ti-file-spreadsheet"></i> Excel</button>
+        <button class="primary" onclick="cargarTablaMatafuegos()"><i class="ti ti-refresh"></i> Actualizar</button>
+      </div>
+    </div>
+
+    <div class="kpis" id="kpisMatafuegos" style="grid-template-columns:repeat(6,1fr)"></div>
+
+    <div id="matafuegosContent"><div class="loading"><div class="spinner"></div>Cargando…</div></div>
+  </div>
+
   <!-- ===== TAB LOG DE CAMBIOS (solo ADMINISTRADOR / PROPIETARIO) ===== -->
   <div class="tcontent" id="tab-log">
     <div class="tbl-card">
@@ -598,6 +640,28 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
           <label>N° de certificado</label>
           <input type="text" id="tNCertificado">
         </div>
+      </div>
+
+      <div id="trazMatafuegoRegistrado" class="traz-info-registrado" style="display:none"></div>
+
+      <div id="trazMatafuegoNuevo" class="traz-alerta-nuevo" style="display:none">
+        <div class="traz-alerta-titulo"><i class="ti ti-alert-triangle"></i> Este N° de matafuego no está registrado</div>
+        <div class="hint" style="margin-bottom:10px">Se va a dar de alta como matafuego nuevo. Verificá bien el número antes de guardar — si lo escribiste mal, vas a crear un registro duplicado.</div>
+        <div class="row2">
+          <div class="field">
+            <label>Capacidad (Kg)</label>
+            <input type="text" id="tCapacidadKg" placeholder="Ej: 10">
+          </div>
+          <div class="field">
+            <label>Tipo</label>
+            <input type="text" id="tTipoMatafuego" list="lstTiposMatafuego" placeholder="Ej: ABC">
+            <datalist id="lstTiposMatafuego"></datalist>
+          </div>
+        </div>
+        <label class="traz-check">
+          <input type="checkbox" id="tConfirmoNumero">
+          Confirmo que verifiqué el N° de matafuego y es correcto
+        </label>
       </div>
     </div>
 
@@ -759,6 +823,7 @@ function mostrarApp() {
 
   cargarUsuarios(); // todos los roles la necesitan: alimenta el desplegable de Responsable
   cargarTrazabilidad();
+  cargarMatafuegos();
   cargarPedidos();
 }
 
@@ -787,6 +852,7 @@ function goToTab(id) {
   if (id === 'kpi') renderKPI(pedidosFiltrados());
   if (id === 'informe') renderInforme();
   if (id === 'trazabilidad') cargarTablaTrazabilidad();
+  if (id === 'matafuegos') cargarTablaMatafuegos();
   if (id === 'log') cargarLog();
   if (id === 'usuarios') cargarUsuarios();
 }
@@ -1521,6 +1587,7 @@ document.getElementById('mEstado').addEventListener('change', () => actualizarSe
  * TRAZABILIDAD (matafuegos, izaje, enganche, superchupa)
  *******************************************************/
 let trazabilidadCache = [];
+let matafuegosCache = [];
 
 async function cargarTrazabilidad() {
   try {
@@ -1528,6 +1595,17 @@ async function cargarTrazabilidad() {
     trazabilidadCache = data.registros;
   } catch (err) {
     console.error('No se pudo cargar la trazabilidad:', err);
+  }
+}
+
+async function cargarMatafuegos() {
+  try {
+    const data = await apiGet({ action: 'getMatafuegos' });
+    matafuegosCache = data.matafuegos;
+    document.getElementById('lstTiposMatafuego').innerHTML =
+      [...new Set(matafuegosCache.map(m => m.tipo).filter(Boolean))].sort().map(t => `<option value="${escapeHtml(t)}">`).join('');
+  } catch (err) {
+    console.error('No se pudo cargar el registro de matafuegos:', err);
   }
 }
 
@@ -1592,6 +1670,13 @@ function actualizarSeccionTrazabilidad(p, precargarValores) {
   document.getElementById('trazCampoCertificado').style.display = cat === 'IZAJE' ? 'block' : 'none';
   document.getElementById('trazLabelCertificacion').textContent = cat === 'SUPERCHUPA' ? 'Fecha de certificación/ensayo' : 'Fecha de certificación';
 
+  if (cat === 'MATAFUEGO') {
+    verificarMatafuegoRegistrado();
+  } else {
+    document.getElementById('trazMatafuegoRegistrado').style.display = 'none';
+    document.getElementById('trazMatafuegoNuevo').style.display = 'none';
+  }
+
   // Los valores ya cargados solo se releen al abrir el modal, no cada vez que
   // se toca el Estado (para no pisar lo que la persona ya tipeó en el ratito).
   if (!precargarValores) return;
@@ -1602,7 +1687,39 @@ function actualizarSeccionTrazabilidad(p, precargarValores) {
   document.getElementById('tFechaVencPrueba').value = existente ? isoDesdeDDMMYYYY(existente.fechaVencPrueba) : '';
   document.getElementById('tFechaCertificacion').value = existente ? isoDesdeDDMMYYYY(existente.fechaCertificacion) : '';
   document.getElementById('tNCertificado').value = existente ? (existente.nCertificado || '') : '';
+  document.getElementById('tCapacidadKg').value = '';
+  document.getElementById('tTipoMatafuego').value = '';
+  document.getElementById('tConfirmoNumero').checked = false;
+  if (cat === 'MATAFUEGO') verificarMatafuegoRegistrado();
 }
+
+// Chequea si el N° de matafuego tipeado ya existe en el registro maestro
+// (pestaña "Matafuegos"). Si no existe, muestra el aviso + pide Capacidad y
+// Tipo para darlo de alta, con una confirmación explícita del número.
+function verificarMatafuegoRegistrado() {
+  const numero = document.getElementById('tNElementoEntrega').value.trim();
+  const bloqueRegistrado = document.getElementById('trazMatafuegoRegistrado');
+  const bloqueNuevo = document.getElementById('trazMatafuegoNuevo');
+
+  if (!numero) {
+    bloqueRegistrado.style.display = 'none';
+    bloqueNuevo.style.display = 'none';
+    return;
+  }
+
+  const existente = matafuegosCache.find(m => m.nMatafuego.trim().toLowerCase() === numero.toLowerCase());
+  if (existente) {
+    bloqueRegistrado.style.display = 'flex';
+    bloqueRegistrado.innerHTML = `<i class="ti ti-circle-check"></i> Matafuego ya registrado: ${escapeHtml(existente.capacidadKg || '—')} Kg, Tipo ${escapeHtml(existente.tipo || '—')}`;
+    bloqueNuevo.style.display = 'none';
+  } else {
+    bloqueRegistrado.style.display = 'none';
+    bloqueNuevo.style.display = 'block';
+  }
+}
+document.getElementById('tNElementoEntrega').addEventListener('input', () => {
+  if (filaEnEdicion && filaEnEdicion.categoriaTrazabilidad === 'MATAFUEGO') verificarMatafuegoRegistrado();
+});
 
 async function guardarTrazabilidadSiCorresponde(p, valores) {
   const cat = p.categoriaTrazabilidad;
@@ -1623,10 +1740,13 @@ async function guardarTrazabilidadSiCorresponde(p, valores) {
       fechaVencPrueba: valores.fechaVencPrueba,
       fechaCertificacion: valores.fechaCertificacion,
       nCertificado: valores.nCertificado,
+      capacidadKg: valores.capacidadKg,
+      tipoMatafuego: valores.tipoMatafuego,
       usuario: currentUser.usuario
     });
     mostrarToast('Trazabilidad guardada', 'ok');
     cargarTrazabilidad(); // refresca el cache local con lo recién guardado
+    if (cat === 'MATAFUEGO') cargarMatafuegos();
   } catch (err) {
     mostrarToast('El pedido se guardó, pero la trazabilidad no: ' + err.message, 'err');
   }
@@ -1699,6 +1819,101 @@ function exportarTrazabilidadExcel() {
   XLSX.writeFile(wb, 'trazabilidad_' + new Date().toISOString().slice(0,10) + '.xlsx');
 }
 
+/*******************************************************
+ * TAB MATAFUEGOS
+ *******************************************************/
+const ESTILO_ESTADO_MATA = {
+  'VIGENTE': 'p-cumplido',
+  'CARGA VENCIDA': 'p-rechazado',
+  'PH VENCIDA': 'p-rechazado',
+  'CARGA PRÓXIMA A VENCER (30 DÍAS)': 'p-proceso',
+  'PH PRÓXIMA A VENCER (30 DÍAS)': 'p-proceso',
+  'CORROBORAR VENCIMIENTO': 'p-otro'
+};
+
+async function cargarTablaMatafuegos() {
+  const cont = document.getElementById('matafuegosContent');
+  cont.innerHTML = '<div class="loading"><div class="spinner"></div>Cargando…</div>';
+  await cargarMatafuegos();
+  renderMatafuegos();
+}
+
+function matafuegosFiltrados() {
+  const numero = document.getElementById('filMataNumero').value.trim().toLowerCase();
+  const patente = document.getElementById('filMataPatente').value.trim().toLowerCase();
+  const estado = document.getElementById('filMataEstado').value;
+  return matafuegosCache.filter(m => {
+    if (numero && !m.nMatafuego.toLowerCase().includes(numero)) return false;
+    if (patente && !String(m.patente || '').toLowerCase().includes(patente)) return false;
+    if (estado && m.estadoVencimiento !== estado) return false;
+    return true;
+  });
+}
+
+function renderMatafuegos() {
+  const registros = matafuegosFiltrados();
+
+  const kpiDefs = [
+    { estado: '', lbl: 'Total', color: '' },
+    { estado: 'VIGENTE', lbl: 'Vigentes', color: 'ok' },
+    { estado: 'CARGA VENCIDA', lbl: 'Carga Vencida', color: 'danger' },
+    { estado: 'PH VENCIDA', lbl: 'PH Vencida', color: 'danger' },
+    { estado: 'CARGA PRÓXIMA A VENCER (30 DÍAS)', lbl: 'Carga por vencer', color: 'warn' },
+    { estado: 'PH PRÓXIMA A VENCER (30 DÍAS)', lbl: 'PH por vencer', color: 'warn' },
+  ];
+  document.getElementById('kpisMatafuegos').innerHTML = kpiDefs.map(k => {
+    const cantidad = k.estado ? registros.filter(m => m.estadoVencimiento === k.estado).length : registros.length;
+    return `<div class="kpi ${k.color}"><div class="lbl">${escapeHtml(k.lbl)}</div><div class="val">${cantidad}</div></div>`;
+  }).join('');
+
+  const cont = document.getElementById('matafuegosContent');
+  if (!registros.length) {
+    cont.innerHTML = '<div class="tbl-card"><div class="empty">No hay matafuegos que coincidan con los filtros</div></div>';
+    return;
+  }
+
+  const filas = registros.map(m => `
+    <tr>
+      <td class="nowrap"><strong>${escapeHtml(m.nMatafuego)}</strong></td>
+      <td class="nowrap" style="text-align:center">${escapeHtml(String(m.capacidadKg || '—'))}</td>
+      <td class="nowrap">${escapeHtml(m.tipo || '—')}</td>
+      <td class="nowrap">${escapeHtml(m.vencCarga || '—')}</td>
+      <td class="nowrap">${escapeHtml(m.vencPH || '—')}</td>
+      <td class="nowrap"><span class="pill ${ESTILO_ESTADO_MATA[m.estadoVencimiento] || 'p-otro'}">${escapeHtml(m.estadoVencimiento)}</span></td>
+      <td class="nowrap">${escapeHtml(m.patente || '—')}</td>
+      <td style="white-space:normal;max-width:220px">${escapeHtml(m.observaciones || '')}</td>
+    </tr>
+  `).join('');
+
+  cont.innerHTML = `
+    <div class="tbl-card">
+      <div class="twrap" style="display:block">
+        <table>
+          <thead><tr>
+            <th>N° Matafuego</th><th>Capacidad Kg</th><th>Tipo</th><th>Venc. Carga</th><th>Venc. PH</th>
+            <th>Estado de vencimiento</th><th>Patente</th><th>Observaciones</th>
+          </tr></thead>
+          <tbody>${filas}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function exportarMatafuegosExcel() {
+  const registros = matafuegosFiltrados();
+  if (!registros.length) { mostrarToast('No hay datos para exportar', 'err'); return; }
+  const filas = registros.map(m => ({
+    'N° Matafuego': m.nMatafuego, 'Capacidad Kg': m.capacidadKg, 'Tipo': m.tipo,
+    'Venc. Carga': m.vencCarga, 'Venc. PH': m.vencPH, 'Estado de vencimiento': m.estadoVencimiento,
+    'Patente': m.patente, 'Observaciones': m.observaciones
+  }));
+  const ws = XLSX.utils.json_to_sheet(filas);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Matafuegos');
+  XLSX.writeFile(wb, 'matafuegos_' + new Date().toISOString().slice(0,10) + '.xlsx');
+}
+
 function cerrarModal() {
   document.getElementById('modalOverlay').classList.remove('open');
   filaEnEdicion = null;
@@ -1746,6 +1961,27 @@ async function guardarEdicion() {
         return;
       }
     }
+    if (filaEnEdicion.categoriaTrazabilidad === 'MATAFUEGO') {
+      const numero = document.getElementById('tNElementoEntrega').value.trim();
+      const yaRegistrado = matafuegosCache.find(m => m.nMatafuego.trim().toLowerCase() === numero.toLowerCase());
+      if (!yaRegistrado) {
+        if (!document.getElementById('tCapacidadKg').value.trim()) {
+          mostrarToast('Es un matafuego nuevo: completá la Capacidad (Kg) antes de guardar', 'err');
+          document.getElementById('tCapacidadKg').focus();
+          return;
+        }
+        if (!document.getElementById('tTipoMatafuego').value.trim()) {
+          mostrarToast('Es un matafuego nuevo: completá el Tipo antes de guardar', 'err');
+          document.getElementById('tTipoMatafuego').focus();
+          return;
+        }
+        if (!document.getElementById('tConfirmoNumero').checked) {
+          mostrarToast('Es un matafuego nuevo: confirmá que verificaste el N° antes de guardar', 'err');
+          document.getElementById('tConfirmoNumero').focus();
+          return;
+        }
+      }
+    }
   }
 
   const btn = document.getElementById('btnGuardarModal');
@@ -1780,7 +2016,9 @@ async function guardarEdicion() {
         fechaVencRecarga: document.getElementById('tFechaVencRecarga').value,
         fechaVencPrueba: document.getElementById('tFechaVencPrueba').value,
         fechaCertificacion: document.getElementById('tFechaCertificacion').value,
-        nCertificado: document.getElementById('tNCertificado').value.trim()
+        nCertificado: document.getElementById('tNCertificado').value.trim(),
+        capacidadKg: document.getElementById('tCapacidadKg').value.trim(),
+        tipoMatafuego: document.getElementById('tTipoMatafuego').value.trim()
       };
       guardarTrazabilidadSiCorresponde(filaEnEdicion, valoresTraz); // en segundo plano, no bloquea el guardado del pedido
     }
