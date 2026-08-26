@@ -126,8 +126,8 @@ input,select,textarea{font-family:inherit;color:var(--text);outline:none}
 .p-regular{background:var(--amber-bg);color:var(--amber-text)}
 .p-fueratermino{background:var(--red-bg);color:var(--red-text)}
 
-.tbl-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden}
-.twrap{display:none;overflow-x:auto;cursor:grab;scrollbar-width:thin;scrollbar-color:var(--border2) var(--surface2)}
+.tbl-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl)}
+.twrap{display:none;overflow-x:auto;overflow-y:visible;cursor:grab;scrollbar-width:thin;scrollbar-color:var(--border2) var(--surface2)}
 .twrap.dragging{cursor:grabbing;user-select:none}
 .twrap::-webkit-scrollbar{height:11px}
 .twrap::-webkit-scrollbar-track{background:var(--surface2)}
@@ -140,6 +140,8 @@ td.nowrap{white-space:nowrap}
 td.trunc{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:help}
 th:first-child,td:first-child{position:sticky;left:0;z-index:2;background:var(--surface);box-shadow:2px 0 5px rgba(0,0,0,.08)}
 th:first-child{background:var(--surface2);z-index:5}
+thead tr th:first-child{border-top-left-radius:var(--rl)}
+thead tr th:last-child{border-top-right-radius:var(--rl)}
 tbody tr:hover td{background:var(--surface2)}
 tbody tr:hover td:first-child{background:var(--surface2)}
 tr.fila-descuento td{background:#FDECEC}
