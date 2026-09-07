@@ -950,7 +950,7 @@ function ordenarPorNP(pedidos) {
   });
 }
 
-let cargandoPedidos_MARCADOR_BORRAR
+async function cargarPedidos() {
   if (cargandoPedidos) {
     mostrarToast('Ya se está actualizando, esperá a que termine', 'err');
     return;
@@ -1657,9 +1657,6 @@ document.getElementById('mEstado').addEventListener('change', () => actualizarSe
 /*******************************************************
  * TRAZABILIDAD (matafuegos, izaje, enganche, superchupa)
  *******************************************************/
-let trazabilidadCache = [];
-let matafuegosCache = [];
-
 async function cargarTrazabilidad() {
   try {
     const data = await apiGet({ action: 'getTrazabilidad' });
@@ -1994,9 +1991,6 @@ function exportarMatafuegosExcel() {
   XLSX.utils.book_append_sheet(wb, ws, 'Matafuegos');
   XLSX.writeFile(wb, 'matafuegos_' + new Date().toISOString().slice(0,10) + '.xlsx');
 }
-
-let matafuegoEnEdicion = null;
-let modoModalMatafuego = 'editar'; // 'editar' | 'nuevo'
 
 function abrirModalMatafuego(fila) {
   const m = matafuegosCache.find(x => x.fila === fila);
