@@ -478,6 +478,7 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
           <option value="SUPERCHUPA">Perno superchupa</option>
           <option value="MANOVACUOMETRO">Manovacuómetro</option>
           <option value="VALVULA_PSV">Válvula PSV</option>
+          <option value="MANGUEROTE">Manguerote</option>
         </select>
       </div>
       <div class="ebtns">
@@ -653,7 +654,9 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
           <label id="trazLabelCertificacion">Fecha de certificación</label>
           <input type="date" id="tFechaCertificacion">
         </div>
-        <div class="field" id="trazCampoCertificado" style="display:none">
+      </div>
+      <div class="row2" id="trazFilaCertificado" style="display:none">
+        <div class="field">
           <label>N° de certificado</label>
           <input type="text" id="tNCertificado">
         </div>
@@ -819,8 +822,10 @@ let msState = {};
 let msOpciones = {};
 MS_KEYS.forEach(k => { msState[k] = new Set(); msOpciones[k] = []; });
 
-if (window.ChartDataLabels) Chart.register(ChartDataLabels);
-Chart.defaults.font.family = "Calibri, 'Segoe UI', system-ui, sans-serif";
+if (typeof Chart !== 'undefined') {
+  if (window.ChartDataLabels) Chart.register(ChartDataLabels);
+  Chart.defaults.font.family = "Calibri, 'Segoe UI', system-ui, sans-serif";
+}
 
 /*******************************************************
  * API
@@ -1684,8 +1689,8 @@ function isoDesdeDDMMYYYY(str) {
   return partes[2] + '-' + partes[1] + '-' + partes[0];
 }
 
-const NOMBRE_CATEGORIA_TRAZ = { MATAFUEGO: 'Matafuego', IZAJE: 'Elemento de izaje', ENGANCHE: 'Perno de enganche', SUPERCHUPA: 'Perno superchupa', MANOVACUOMETRO: 'Manovacuómetro', VALVULA_PSV: 'Válvula PSV' };
-const LABEL_ENTREGA_TRAZ = { MATAFUEGO: 'N° de matafuego que entrega', IZAJE: 'N° de elemento', ENGANCHE: 'N° de elemento', SUPERCHUPA: 'N° de elemento', MANOVACUOMETRO: 'N° de elemento', VALVULA_PSV: 'N° de elemento' };
+const NOMBRE_CATEGORIA_TRAZ = { MATAFUEGO: 'Matafuego', IZAJE: 'Elemento de izaje', ENGANCHE: 'Perno de enganche', SUPERCHUPA: 'Perno superchupa', MANOVACUOMETRO: 'Manovacuómetro', VALVULA_PSV: 'Válvula PSV', MANGUEROTE: 'Manguerote' };
+const LABEL_ENTREGA_TRAZ = { MATAFUEGO: 'N° de matafuego que entrega', IZAJE: 'N° de elemento', ENGANCHE: 'N° de elemento', SUPERCHUPA: 'N° de elemento', MANOVACUOMETRO: 'N° de elemento', VALVULA_PSV: 'N° de elemento', MANGUEROTE: 'N° de manguerote' };
 
 // Campos obligatorios por categoría cuando el Estado que se guarda es CUMPLIDO:
 // TODOS los campos que quedan visibles para esa categoría, sin excepción.
@@ -1716,6 +1721,10 @@ const CAMPOS_OBLIGATORIOS_TRAZ = {
   VALVULA_PSV: [
     { id: 'tNElementoEntrega', label: 'N° de elemento' },
     { id: 'tFechaCertificacion', label: 'Fecha de certificación' }
+  ],
+  MANGUEROTE: [
+    { id: 'tNElementoEntrega', label: 'N° de manguerote' },
+    { id: 'tNCertificado', label: 'N° de certificado' }
   ]
 };
 
@@ -1735,7 +1744,7 @@ function actualizarSeccionTrazabilidad(p, precargarValores) {
   document.getElementById('trazCampoRecambio').style.display = cat === 'MATAFUEGO' ? 'block' : 'none';
   document.getElementById('trazFilaVencimientos').style.display = cat === 'MATAFUEGO' ? 'grid' : 'none';
   document.getElementById('trazFilaCertificacion').style.display = (cat === 'IZAJE' || cat === 'ENGANCHE' || cat === 'SUPERCHUPA' || cat === 'MANOVACUOMETRO' || cat === 'VALVULA_PSV') ? 'grid' : 'none';
-  document.getElementById('trazCampoCertificado').style.display = cat === 'IZAJE' ? 'block' : 'none';
+  document.getElementById('trazFilaCertificado').style.display = (cat === 'IZAJE' || cat === 'MANGUEROTE') ? 'grid' : 'none';
   document.getElementById('trazLabelCertificacion').textContent = cat === 'SUPERCHUPA' ? 'Fecha de certificación/ensayo' : 'Fecha de certificación';
 
   if (cat === 'MATAFUEGO') {
