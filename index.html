@@ -200,6 +200,11 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
 .traz-alerta-titulo{font-size:12px;font-weight:700;color:var(--amber-text);display:flex;align-items:center;gap:6px;margin-bottom:4px}
 .traz-check{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--amber-text);font-weight:600;cursor:pointer;margin-top:6px}
 .traz-check input{width:16px;height:16px;accent-color:var(--amber);cursor:pointer}
+.traz-unidad{border:1px solid var(--border2);border-left:4px solid var(--rojo);border-radius:var(--r);padding:10px 12px 2px;margin-bottom:10px;background:var(--surface)}
+.traz-unidad.con-error{border-left-color:var(--red);background:var(--red-bg)}
+.traz-unidad-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px}
+.traz-unidad-tit{font-size:12px;font-weight:700;color:var(--text)}
+.traz-unidad-top button{font-size:10px;padding:4px 9px}
 
 #kpisMatafuegos .kpi .lbl,#kpisMatafuegos .kpi .val{text-align:center}
 .mata-kpi-titulo{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin:12px 0 8px}
@@ -667,80 +672,20 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
 
     <div id="trazSection" class="traz-section" style="display:none">
       <div class="traz-titulo" id="trazTitulo">Trazabilidad</div>
-      <div class="hint" style="margin-bottom:10px">Este artículo requiere trazabilidad. Todos los campos de abajo son obligatorios para poder guardar en estado CUMPLIDO. La Fecha de entrega se toma sola de la Fecha de Cumplimiento de arriba.</div>
+      <div class="hint" id="trazHintGeneral" style="margin-bottom:10px">Este artículo requiere trazabilidad <strong>por unidad</strong>: se arma una ficha por cada unidad de la Cantidad de la nota. Todos los campos son obligatorios para guardar en CUMPLIDO. La Fecha de entrega se toma de la Fecha de Cumplimiento.</div>
+      <div id="trazAvisoCantidad" class="traz-alerta-nuevo" style="display:none;margin-bottom:10px"></div>
 
-      <div class="row2">
+      <div class="row2" id="trazFilaResponsable" style="display:none">
         <div class="field">
-          <label id="trazLabelEntrega">N° de elemento que entrega</label>
-          <input type="text" id="tNElementoEntrega" list="lstManguerotesStock" autocomplete="off">
-          <div class="hint" id="trazEntregaInfo"></div>
-        </div>
-        <div class="field" id="trazCampoRecambio" style="display:none">
-          <label id="trazLabelRecambio">N° de matafuego que recambia</label>
-          <input type="text" id="tNElementoRecambio">
-          <div class="hint" id="trazRecambioInfo"></div>
-        </div>
-      </div>
-
-      <div class="row2" id="trazFilaPatente" style="display:none">
-        <div class="field">
-          <label>Patente de la unidad que lo recibe</label>
-          <input type="text" id="tPatenteDestino" placeholder="Ej: AB123CD">
-          <div class="hint">Se precarga con el Destino de la nota. Corregila si el destino no es una patente (base, sector, etc.)</div>
-        </div>
-      </div>
-
-      <div class="row2" id="trazFilaVencimientos" style="display:none">
-        <div class="field">
-          <label>Fecha vencimiento recarga</label>
-          <input type="date" id="tFechaVencRecarga">
-        </div>
-        <div class="field">
-          <label>Fecha vencimiento prueba</label>
-          <input type="date" id="tFechaVencPrueba">
-        </div>
-      </div>
-
-      <div class="row2" id="trazFilaCertificacion" style="display:none">
-        <div class="field">
-          <label id="trazLabelCertificacion">Fecha de certificación</label>
-          <input type="date" id="tFechaCertificacion">
-        </div>
-      </div>
-      <div class="row2" id="trazFilaCertificado" style="display:none">
-        <div class="field">
-          <label>N° de certificado</label>
-          <input type="text" id="tNCertificado">
-        </div>
-        <div class="field" id="trazCampoResponsable" style="display:none">
-          <label>Responsable de la entrega</label>
+          <label>Responsable de la entrega (para todas las unidades)</label>
           <input type="text" id="tResponsableEntrega" list="lstResponsablesEntrega">
           <datalist id="lstResponsablesEntrega"></datalist>
         </div>
       </div>
+
+      <div id="trazUnidades"></div>
       <datalist id="lstManguerotesStock"></datalist>
-
-      <div id="trazMatafuegoRegistrado" class="traz-info-registrado" style="display:none"></div>
-
-      <div id="trazMatafuegoNuevo" class="traz-alerta-nuevo" style="display:none">
-        <div class="traz-alerta-titulo"><i class="ti ti-alert-triangle"></i> Este N° de matafuego no está registrado</div>
-        <div class="hint" style="margin-bottom:10px">Se va a dar de alta como matafuego nuevo. Verificá bien el número antes de guardar — si lo escribiste mal, vas a crear un registro duplicado.</div>
-        <div class="row2">
-          <div class="field">
-            <label>Capacidad (Kg)</label>
-            <input type="text" id="tCapacidadKg" placeholder="Ej: 10">
-          </div>
-          <div class="field">
-            <label>Tipo</label>
-            <input type="text" id="tTipoMatafuego" list="lstTiposMatafuego" placeholder="Ej: ABC">
-            <datalist id="lstTiposMatafuego"></datalist>
-          </div>
-        </div>
-        <label class="traz-check">
-          <input type="checkbox" id="tConfirmoNumero">
-          Confirmo que verifiqué el N° de matafuego y es correcto
-        </label>
-      </div>
+      <datalist id="lstTiposMatafuego"></datalist>
     </div>
 
     <div class="modal-actions">
@@ -1799,150 +1744,38 @@ function isoDesdeDDMMYYYY(str) {
 }
 
 const NOMBRE_CATEGORIA_TRAZ = { MATAFUEGO: 'Matafuego', IZAJE: 'Elemento de izaje', ENGANCHE: 'Perno de enganche', SUPERCHUPA: 'Perno superchupa', MANOVACUOMETRO: 'Manovacuómetro', VALVULA_PSV: 'Válvula PSV', MANGUEROTE: 'Manguerote' };
-const LABEL_ENTREGA_TRAZ = { MATAFUEGO: 'N° de matafuego que entrega', IZAJE: 'N° de elemento', ENGANCHE: 'N° de elemento', SUPERCHUPA: 'N° de elemento', MANOVACUOMETRO: 'N° de elemento', VALVULA_PSV: 'N° de elemento', MANGUEROTE: 'N° de manguerote que se entrega' };
+const MAX_UNIDADES_TRAZ = 30;
 
-// Campos obligatorios por categoría cuando el Estado que se guarda es CUMPLIDO:
-// TODOS los campos que quedan visibles para esa categoría, sin excepción.
-const CAMPOS_OBLIGATORIOS_TRAZ = {
-  MATAFUEGO: [
-    { id: 'tNElementoEntrega', label: 'N° de matafuego que entrega' },
-    { id: 'tNElementoRecambio', label: 'N° de matafuego que recambia' },
-    { id: 'tPatenteDestino', label: 'Patente de la unidad que lo recibe' },
-    { id: 'tFechaVencRecarga', label: 'Fecha vencimiento recarga' },
-    { id: 'tFechaVencPrueba', label: 'Fecha vencimiento prueba' }
-  ],
-  IZAJE: [
-    { id: 'tNElementoEntrega', label: 'N° de elemento' },
-    { id: 'tFechaCertificacion', label: 'Fecha de certificación' },
-    { id: 'tNCertificado', label: 'N° de certificado' }
-  ],
-  ENGANCHE: [
-    { id: 'tNElementoEntrega', label: 'N° de elemento' },
-    { id: 'tFechaCertificacion', label: 'Fecha de certificación' }
-  ],
-  SUPERCHUPA: [
-    { id: 'tNElementoEntrega', label: 'N° de elemento' },
-    { id: 'tFechaCertificacion', label: 'Fecha de certificación/ensayo' }
-  ],
-  MANOVACUOMETRO: [
-    { id: 'tNElementoEntrega', label: 'N° de elemento' },
-    { id: 'tFechaCertificacion', label: 'Fecha de certificación' }
-  ],
-  VALVULA_PSV: [
-    { id: 'tNElementoEntrega', label: 'N° de elemento' },
-    { id: 'tFechaCertificacion', label: 'Fecha de certificación' }
-  ],
-  MANGUEROTE: [
-    { id: 'tNElementoEntrega', label: 'N° de manguerote que se entrega' },
-    { id: 'tNElementoRecambio', label: 'N° de manguerote viejo (o NA si no hay recambio)' },
-    { id: 'tNCertificado', label: 'N° de certificado' },
-    { id: 'tResponsableEntrega', label: 'Responsable de la entrega' }
-  ]
+// Campos de cada FICHA DE UNIDAD por categoría. Todos son obligatorios en CUMPLIDO.
+const CAMPOS_UNIDAD_TRAZ = {
+  MATAFUEGO:      ['entrega', 'recambio', 'patente', 'vencRecarga', 'vencPrueba'],
+  IZAJE:          ['entrega', 'fechaCert', 'nCert'],
+  ENGANCHE:       ['entrega', 'fechaCert'],
+  SUPERCHUPA:     ['entrega', 'fechaCert'],
+  MANOVACUOMETRO: ['entrega', 'fechaCert'],
+  VALVULA_PSV:    ['entrega', 'fechaCert'],
+  MANGUEROTE:     ['entrega', 'recambio', 'nCert']
 };
-
-function actualizarSeccionTrazabilidad(p, precargarValores) {
-  const cat = p ? p.categoriaTrazabilidad : '';
-  const estadoActual = document.getElementById('mEstado').value;
-  const section = document.getElementById('trazSection');
-
-  // Solo se pide/guarda trazabilidad cuando el pedido está CUMPLIDO — antes
-  // de eso (Pendiente, En Proceso, Cumplido en Depósito) o si se Rechaza,
-  // todavía no hay datos reales para cargar.
-  if (!cat || estadoActual !== 'CUMPLIDO') { section.style.display = 'none'; return; }
-  section.style.display = 'block';
-
-  document.getElementById('trazTitulo').innerHTML = '<i class="ti ti-shield-check"></i> Trazabilidad — ' + (NOMBRE_CATEGORIA_TRAZ[cat] || cat);
-  document.getElementById('trazLabelEntrega').textContent = LABEL_ENTREGA_TRAZ[cat] || 'N° de elemento';
-  document.getElementById('trazCampoRecambio').style.display = (cat === 'MATAFUEGO' || cat === 'MANGUEROTE') ? 'block' : 'none';
-  document.getElementById('trazLabelRecambio').textContent = cat === 'MANGUEROTE' ? 'N° de manguerote viejo (NA si no hay)' : 'N° de matafuego que recambia';
-  document.getElementById('trazCampoResponsable').style.display = cat === 'MANGUEROTE' ? 'block' : 'none';
-  document.getElementById('trazFilaPatente').style.display = cat === 'MATAFUEGO' ? 'grid' : 'none';
-  document.getElementById('trazFilaVencimientos').style.display = cat === 'MATAFUEGO' ? 'grid' : 'none';
-  document.getElementById('trazFilaCertificacion').style.display = (cat === 'IZAJE' || cat === 'ENGANCHE' || cat === 'SUPERCHUPA' || cat === 'MANOVACUOMETRO' || cat === 'VALVULA_PSV') ? 'grid' : 'none';
-  document.getElementById('trazFilaCertificado').style.display = (cat === 'IZAJE' || cat === 'MANGUEROTE') ? 'grid' : 'none';
-  document.getElementById('trazLabelCertificacion').textContent = cat === 'SUPERCHUPA' ? 'Fecha de certificación/ensayo' : 'Fecha de certificación';
-
-  if (cat === 'MATAFUEGO') {
-    verificarMatafuegoRegistrado();
-  } else {
-    document.getElementById('trazMatafuegoRegistrado').style.display = 'none';
-    document.getElementById('trazMatafuegoNuevo').style.display = 'none';
-  }
-  document.getElementById('trazEntregaInfo').textContent = '';
-  if (cat === 'MANGUEROTE') {
-    poblarSugerenciasManguerote(p);
-    verificarMangueroteEntrega();
-    verificarMangueroteViejo();
-  } else {
-    document.getElementById('lstManguerotesStock').innerHTML = '';
-  }
-
-  // Los valores ya cargados solo se releen al abrir el modal, no cada vez que
-  // se toca el Estado (para no pisar lo que la persona ya tipeó en el ratito).
-  if (!precargarValores) return;
-  const existente = trazabilidadCache.find(t => Number(t.filaOrigen) === p.fila && t.categoria === cat);
-  document.getElementById('tNElementoEntrega').value = existente ? (existente.nElementoEntrega || '') : '';
-  document.getElementById('tNElementoRecambio').value = existente ? (existente.nElementoRecambio || '') : '';
-  document.getElementById('tFechaVencRecarga').value = existente ? isoDesdeDDMMYYYY(existente.fechaVencRecarga) : '';
-  document.getElementById('tFechaVencPrueba').value = existente ? isoDesdeDDMMYYYY(existente.fechaVencPrueba) : '';
-  document.getElementById('tFechaCertificacion').value = existente ? isoDesdeDDMMYYYY(existente.fechaCertificacion) : '';
-  document.getElementById('tNCertificado').value = existente ? (existente.nCertificado || '') : '';
-  document.getElementById('tPatenteDestino').value = String(p.destino || '').trim().toUpperCase();
-  document.getElementById('tResponsableEntrega').value = existente && existente.responsableEntrega ? existente.responsableEntrega : (currentUser ? currentUser.nombre : '');
-  document.getElementById('tCapacidadKg').value = '';
-  document.getElementById('tTipoMatafuego').value = '';
-  document.getElementById('tConfirmoNumero').checked = false;
-  if (cat === 'MATAFUEGO') {
-    verificarMatafuegoRegistrado();
-    verificarMatafuegoRecambio();
-  }
-  if (cat === 'MANGUEROTE') {
-    verificarMangueroteEntrega();
-    verificarMangueroteViejo();
-  }
+function labelCampoTraz(cat, campo) {
+  const L = {
+    entrega: { MATAFUEGO: 'N° de matafuego que entrega', MANGUEROTE: 'N° de manguerote que se entrega', _: 'N° de elemento' },
+    recambio: { MATAFUEGO: 'N° de matafuego que recambia', MANGUEROTE: 'N° de manguerote viejo (NA si no hay)', _: 'N° que recambia' },
+    patente: { _: 'Patente de la unidad que lo recibe' },
+    vencRecarga: { _: 'Fecha vencimiento recarga' },
+    vencPrueba: { _: 'Fecha vencimiento prueba' },
+    fechaCert: { SUPERCHUPA: 'Fecha de certificación/ensayo', _: 'Fecha de certificación' },
+    nCert: { _: 'N° de certificado' }
+  };
+  return (L[campo][cat] || L[campo]._);
 }
+const TIPO_CAMPO_TRAZ = { vencRecarga: 'date', vencPrueba: 'date', fechaCert: 'date' };
+// Campos que se pueden copiar de la unidad 1 a las demás (los N° son únicos, no se copian)
+const CAMPOS_COPIABLES_TRAZ = ['patente', 'vencRecarga', 'vencPrueba', 'fechaCert', 'nCert', 'capacidad', 'tipo'];
 
-// Chequea si el N° de matafuego tipeado ya existe en el registro maestro
-// (pestaña "Matafuegos"). Si no existe, muestra el aviso + pide Capacidad y
-// Tipo para darlo de alta, con una confirmación explícita del número.
-function verificarMatafuegoRegistrado() {
-  const numero = document.getElementById('tNElementoEntrega').value.trim();
-  const bloqueRegistrado = document.getElementById('trazMatafuegoRegistrado');
-  const bloqueNuevo = document.getElementById('trazMatafuegoNuevo');
+let unidadesTrazN = 0;          // cuántas fichas hay armadas en el modal
+const idU = (campo, i) => 'tu-' + campo + '-' + i;
+const valU = (campo, i) => { const el = document.getElementById(idU(campo, i)); return el ? el.value.trim() : ''; };
 
-  if (!numero) {
-    bloqueRegistrado.style.display = 'none';
-    bloqueNuevo.style.display = 'none';
-    return;
-  }
-
-  const existente = matafuegosCache.find(m => m.nMatafuego.trim().toLowerCase() === numero.toLowerCase());
-  if (existente) {
-    bloqueRegistrado.style.display = 'flex';
-    bloqueRegistrado.innerHTML = `<i class="ti ti-circle-check"></i> Matafuego ya registrado: ${escapeHtml(existente.capacidadKg || '—')} Kg, Tipo ${escapeHtml(existente.tipo || '—')}`;
-    bloqueNuevo.style.display = 'none';
-  } else {
-    bloqueRegistrado.style.display = 'none';
-    bloqueNuevo.style.display = 'block';
-  }
-}
-document.getElementById('tNElementoEntrega').addEventListener('input', () => {
-  if (filaEnEdicion && filaEnEdicion.categoriaTrazabilidad === 'MATAFUEGO') {
-    verificarMatafuegoRegistrado();
-    verificarMatafuegoRecambio();
-  }
-  if (filaEnEdicion && filaEnEdicion.categoriaTrazabilidad === 'MANGUEROTE') {
-    verificarMangueroteEntrega();
-    verificarMangueroteViejo();
-  }
-});
-document.getElementById('tNElementoRecambio').addEventListener('input', () => {
-  if (filaEnEdicion && filaEnEdicion.categoriaTrazabilidad === 'MANGUEROTE') verificarMangueroteViejo();
-});
-
-/*******************************************************
- * MANGUEROTES — verificaciones en vivo dentro de Gestionar
- *******************************************************/
 // "0129201" y "129201" son el mismo N° (Sheets a veces se come el cero)
 function normalizarNumero(v) {
   return String(v == null ? '' : v).trim().toUpperCase().replace(/^0+(?=\d)/, '');
@@ -1955,9 +1788,221 @@ function buscarMangueroteCache(numero) {
   const n = normalizarNumero(numero);
   return n ? manguerotesCache.find(m => normalizarNumero(m.numeracion) === n) : null;
 }
+function buscarMatafuegoCache(numero) {
+  const n = normalizarNumero(numero);
+  return n ? matafuegosCache.find(m => normalizarNumero(m.nMatafuego) === n) : null;
+}
 
-// Sugerencias del campo "N° que se entrega": los EN STOCK del mismo diámetro
-// que pide la nota. Y la lista de responsables = usuarios del sistema.
+// Cantidad de unidades a trazar = Cantidad de la nota (entero, mínimo 1, tope MAX)
+function cantidadUnidadesTraz(p) {
+  const c = Math.floor(parseFloat(String(p.cantidad == null ? '' : p.cantidad).replace(',', '.')));
+  const n = isFinite(c) && c >= 1 ? c : 1;
+  return { n: Math.min(n, MAX_UNIDADES_TRAZ), original: p.cantidad, recortada: n > MAX_UNIDADES_TRAZ, invalida: !(isFinite(c) && c >= 1) };
+}
+
+function htmlCampoUnidad(cat, campo, i) {
+  const tipo = TIPO_CAMPO_TRAZ[campo] || 'text';
+  const lista = (campo === 'entrega' && cat === 'MANGUEROTE') ? ' list="lstManguerotesStock" autocomplete="off"' : '';
+  const info = (campo === 'entrega' || campo === 'recambio') ? `<div class="hint" id="${idU(campo + 'Info', i)}"></div>` : '';
+  return `<div class="field"><label>${escapeHtml(labelCampoTraz(cat, campo))}</label>
+    <input type="${tipo}" id="${idU(campo, i)}"${lista} data-u="${i}" data-campo="${campo}">${info}</div>`;
+}
+
+function htmlUnidad(cat, i, n) {
+  const campos = CAMPOS_UNIDAD_TRAZ[cat] || ['entrega'];
+  let filas = '';
+  for (let k = 0; k < campos.length; k += 2) {
+    filas += `<div class="row2">${htmlCampoUnidad(cat, campos[k], i)}${campos[k + 1] ? htmlCampoUnidad(cat, campos[k + 1], i) : ''}</div>`;
+  }
+  const extraMatafuego = cat !== 'MATAFUEGO' ? '' : `
+    <div id="${idU('mataReg', i)}" class="traz-info-registrado" style="display:none;margin-bottom:10px"></div>
+    <div id="${idU('mataNuevo', i)}" class="traz-alerta-nuevo" style="display:none;margin-bottom:10px">
+      <div class="traz-alerta-titulo"><i class="ti ti-alert-triangle"></i> Este N° de matafuego no está registrado</div>
+      <div class="hint" style="margin-bottom:8px">Se da de alta como nuevo. Verificá bien el número: si está mal escrito, se crea un registro duplicado.</div>
+      <div class="row2">
+        <div class="field"><label>Capacidad (Kg)</label><input type="text" id="${idU('capacidad', i)}" data-u="${i}" placeholder="Ej: 10"></div>
+        <div class="field"><label>Tipo</label><input type="text" id="${idU('tipo', i)}" data-u="${i}" list="lstTiposMatafuego" placeholder="Ej: ABC"></div>
+      </div>
+      <label class="traz-check"><input type="checkbox" id="${idU('confirmo', i)}"> Confirmo que verifiqué el N° de matafuego y es correcto</label>
+    </div>`;
+  const copiar = (i === 1 && n > 1) ? `<button type="button" onclick="copiarUnidad1ATodas()"><i class="ti ti-copy"></i> Copiar datos a las demás</button>` : '';
+  return `<div class="traz-unidad" id="${idU('card', i)}">
+    <div class="traz-unidad-top"><span class="traz-unidad-tit">Unidad ${i} de ${n}</span>${copiar}</div>
+    ${filas}${extraMatafuego}</div>`;
+}
+
+// Se llama al abrir el modal (precargarValores = true) y cada vez que cambia
+// el Estado (false: solo muestra/oculta, no pisa lo ya tipeado).
+function actualizarSeccionTrazabilidad(p, precargarValores) {
+  const cat = p ? p.categoriaTrazabilidad : '';
+  const section = document.getElementById('trazSection');
+  if (!cat) { section.style.display = 'none'; unidadesTrazN = 0; return; }
+
+  if (precargarValores) armarUnidadesTraz(p, cat);
+  // Solo se pide trazabilidad al pasar a CUMPLIDO (antes no hay datos reales)
+  section.style.display = document.getElementById('mEstado').value === 'CUMPLIDO' ? 'block' : 'none';
+}
+
+function armarUnidadesTraz(p, cat) {
+  const cant = cantidadUnidadesTraz(p);
+  const n = cant.n;
+  unidadesTrazN = n;
+
+  document.getElementById('trazTitulo').innerHTML = '<i class="ti ti-shield-check"></i> Trazabilidad — ' +
+    escapeHtml(NOMBRE_CATEGORIA_TRAZ[cat] || cat) + ' · ' + n + (n === 1 ? ' unidad' : ' unidades');
+  const aviso = document.getElementById('trazAvisoCantidad');
+  if (cant.recortada || cant.invalida) {
+    aviso.style.display = 'block';
+    aviso.innerHTML = cant.recortada
+      ? `<i class="ti ti-alert-triangle"></i> La nota tiene Cantidad ${escapeHtml(String(cant.original))}: se muestran las primeras ${MAX_UNIDADES_TRAZ} fichas (máximo por ítem).`
+      : `<i class="ti ti-alert-triangle"></i> La Cantidad de la nota (${escapeHtml(String(cant.original || 'vacía'))}) no es un número válido: se toma 1 unidad.`;
+  } else {
+    aviso.style.display = 'none';
+  }
+
+  document.getElementById('trazFilaResponsable').style.display = cat === 'MANGUEROTE' ? 'grid' : 'none';
+
+  let html = '';
+  for (let i = 1; i <= n; i++) html += htmlUnidad(cat, i, n);
+  document.getElementById('trazUnidades').innerHTML = html;
+
+  // Precarga: lo ya guardado de cada unidad (por N° de ítem)
+  const existentes = trazabilidadCache
+    .filter(t => Number(t.filaOrigen) === p.fila && t.categoria === cat)
+    .sort((a, b) => (a.item || 1) - (b.item || 1));
+  const set = (campo, i, v) => { const el = document.getElementById(idU(campo, i)); if (el) el.value = v || ''; };
+  for (let i = 1; i <= n; i++) {
+    const e = existentes.find(t => (t.item || 1) === i);
+    set('entrega', i, e && e.nElementoEntrega);
+    set('recambio', i, e && e.nElementoRecambio);
+    set('vencRecarga', i, e && isoDesdeDDMMYYYY(e.fechaVencRecarga));
+    set('vencPrueba', i, e && isoDesdeDDMMYYYY(e.fechaVencPrueba));
+    set('fechaCert', i, e && isoDesdeDDMMYYYY(e.fechaCertificacion));
+    set('nCert', i, e && e.nCertificado);
+    set('patente', i, String(p.destino || '').trim().toUpperCase());
+  }
+  const respGuardado = existentes.find(t => t.responsableEntrega);
+  document.getElementById('tResponsableEntrega').value = respGuardado ? respGuardado.responsableEntrega : (currentUser ? currentUser.nombre : '');
+
+  if (cat === 'MANGUEROTE') poblarSugerenciasManguerote(p);
+  verificarTodasLasUnidades();
+}
+
+// Un solo listener para todas las fichas (se re-arman en cada apertura)
+document.getElementById('trazUnidades').addEventListener('input', (ev) => {
+  if (!ev.target.dataset || !ev.target.dataset.u) return;
+  verificarTodasLasUnidades(); // los duplicados entre unidades dependen de todas
+});
+
+function copiarUnidad1ATodas() {
+  for (let i = 2; i <= unidadesTrazN; i++) {
+    CAMPOS_COPIABLES_TRAZ.forEach(campo => {
+      const origen = document.getElementById(idU(campo, 1));
+      const destino = document.getElementById(idU(campo, i));
+      if (origen && destino && origen.value) destino.value = origen.value;
+    });
+  }
+  verificarTodasLasUnidades();
+  mostrarToast('Datos de la unidad 1 copiados a las demás (los N° no se copian)', 'ok');
+}
+
+/*******************************************************
+ * VERIFICACIÓN EN VIVO POR UNIDAD
+ * Devuelve por unidad { nivelEntrega, txtEntrega, nivelRecambio, txtRecambio }
+ * nivel: 'ok' (verde) | 'warn' (ámbar, deja guardar) | 'error' (rojo, bloquea)
+ *******************************************************/
+function evaluarUnidades() {
+  const cat = filaEnEdicion ? filaEnEdicion.categoriaTrazabilidad : '';
+  const res = [];
+  const cuentaEnt = {}, cuentaRec = {};
+  for (let i = 1; i <= unidadesTrazN; i++) {
+    const e = normalizarNumero(valU('entrega', i)); if (e) cuentaEnt[e] = (cuentaEnt[e] || 0) + 1;
+    const r = normalizarNumero(valU('recambio', i)); if (r && r !== 'NA') cuentaRec[r] = (cuentaRec[r] || 0) + 1;
+  }
+  const diamNota = filaEnEdicion ? diametroDesdeTexto(filaEnEdicion.articulo) : '';
+
+  for (let i = 1; i <= unidadesTrazN; i++) {
+    const out = { nivelEntrega: 'ok', txtEntrega: '', nivelRecambio: 'ok', txtRecambio: '', mataNuevo: false, mataReg: null };
+    const ent = valU('entrega', i), rec = valU('recambio', i);
+    const nEnt = normalizarNumero(ent), nRec = normalizarNumero(rec);
+
+    // --- N° que se entrega
+    if (nEnt && cuentaEnt[nEnt] > 1) {
+      out.nivelEntrega = 'error'; out.txtEntrega = 'Este N° está repetido en otra unidad de esta nota.';
+    } else if (nEnt && cat === 'MANGUEROTE') {
+      const m = buscarMangueroteCache(ent);
+      if (!m) { out.nivelEntrega = 'warn'; out.txtEntrega = 'No está en el registro: se da de alta como manguerote ' + (diamNota || '') + ' nuevo.'; }
+      else if (diamNota && m.diametro && m.diametro !== diamNota) { out.nivelEntrega = 'error'; out.txtEntrega = 'Registrado como ' + m.diametro + ' y la nota pide ' + diamNota + '.'; }
+      else if (m.estado === 'ENTREGADO' && String(m.np) !== String(filaEnEdicion.np)) { out.nivelEntrega = 'error'; out.txtEntrega = 'Ya figura ENTREGADO en NP ' + m.np + ' (' + (m.destino || 's/d') + '). Si se devolvió, corregí su estado en la pestaña Manguerotes.'; }
+      else if (m.estado === 'BAJA') { out.nivelEntrega = 'error'; out.txtEntrega = 'Este manguerote está dado de BAJA.'; }
+      else { out.txtEntrega = 'Registrado: ' + (m.diametro || '') + ', ' + m.estado + ', cert. ' + (m.nCertificado || 's/d') + '.'; }
+    } else if (nEnt && cat === 'MATAFUEGO') {
+      out.mataReg = buscarMatafuegoCache(ent);
+      out.mataNuevo = !out.mataReg;
+    }
+
+    // --- N° que se retira / recambia
+    if (cat === 'MATAFUEGO' || cat === 'MANGUEROTE') {
+      if (!rec) {
+        out.txtRecambio = cat === 'MANGUEROTE' ? 'Si no se retira ningún manguerote, escribí NA' : '';
+      } else if (nRec === 'NA') {
+        out.txtRecambio = 'Sin recambio';
+      } else if (nRec === nEnt) {
+        out.nivelRecambio = 'error'; out.txtRecambio = 'No puede ser el mismo N° que el que se entrega.';
+      } else if (cuentaRec[nRec] > 1) {
+        out.nivelRecambio = 'error'; out.txtRecambio = 'Este N° viejo está repetido en otra unidad.';
+      } else {
+        const reg = cat === 'MATAFUEGO' ? buscarMatafuegoCache(rec) : buscarMangueroteCache(rec);
+        if (reg) {
+          out.txtRecambio = cat === 'MATAFUEGO'
+            ? 'Registrado (patente actual: ' + (reg.patente || 'sin asignar') + '). Al guardar queda desasignado y retirado.'
+            : 'Registrado (' + (reg.destino || 'sin destino') + '). Al guardar queda RETIRADO.';
+        } else {
+          out.nivelRecambio = 'warn'; out.txtRecambio = 'No está en el registro: queda en Trazabilidad, pero no se actualiza el maestro.';
+        }
+      }
+    }
+    res.push(out);
+  }
+  return res;
+}
+
+function pintarHint(id, nivel, texto) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = texto;
+  el.style.color = !texto ? '' : (nivel === 'error' ? 'var(--red-text)' : nivel === 'warn' ? 'var(--amber-text)' : 'var(--green-text)');
+  el.style.fontWeight = nivel === 'error' ? '600' : '';
+}
+
+function verificarTodasLasUnidades() {
+  const evals = evaluarUnidades();
+  evals.forEach((ev, idx) => {
+    const i = idx + 1;
+    pintarHint(idU('entregaInfo', i), ev.nivelEntrega, ev.txtEntrega);
+    pintarHint(idU('recambioInfo', i), ev.nivelRecambio, ev.txtRecambio);
+    const card = document.getElementById(idU('card', i));
+    if (card) card.classList.toggle('con-error', ev.nivelEntrega === 'error' || ev.nivelRecambio === 'error');
+
+    // Matafuego: registrado / alta nueva
+    const reg = document.getElementById(idU('mataReg', i));
+    const nuevo = document.getElementById(idU('mataNuevo', i));
+    if (reg && nuevo) {
+      reg.style.display = ev.mataReg ? 'flex' : 'none';
+      if (ev.mataReg) reg.innerHTML = `<i class="ti ti-circle-check"></i> Matafuego ya registrado: ${escapeHtml(ev.mataReg.capacidadKg || '—')} Kg, Tipo ${escapeHtml(ev.mataReg.tipo || '—')}`;
+      nuevo.style.display = ev.mataNuevo ? 'block' : 'none';
+    }
+    // Manguerote registrado: completa el certificado si está vacío
+    if (filaEnEdicion && filaEnEdicion.categoriaTrazabilidad === 'MANGUEROTE') {
+      const m = buscarMangueroteCache(valU('entrega', i));
+      const cert = document.getElementById(idU('nCert', i));
+      if (m && m.nCertificado && cert && !cert.value.trim()) cert.value = m.nCertificado;
+    }
+  });
+  return evals;
+}
+
+// Sugerencias del N° de manguerote: los EN STOCK del diámetro que pide la nota
 function poblarSugerenciasManguerote(p) {
   const diam = diametroDesdeTexto(p.articulo);
   document.getElementById('lstManguerotesStock').innerHTML = manguerotesCache
@@ -1967,125 +2012,76 @@ function poblarSugerenciasManguerote(p) {
     [...new Set(usuariosCache.filter(u => u.activo).map(u => u.nombre))].sort().map(n => `<option value="${escapeHtml(n)}">`).join('');
 }
 
-// Devuelve { nivel: 'ok'|'warn'|'error', texto } para el manguerote que se entrega
-function evaluarMangueroteEntrega() {
-  if (!filaEnEdicion) return { nivel: 'ok', texto: '' };
-  const numero = document.getElementById('tNElementoEntrega').value.trim();
-  if (!numero) return { nivel: 'ok', texto: '' };
-  const diamNota = diametroDesdeTexto(filaEnEdicion.articulo);
-  const m = buscarMangueroteCache(numero);
-  if (!m) {
-    return { nivel: 'warn', texto: 'No está en el registro: se va a dar de alta como manguerote ' + (diamNota || '') + ' nuevo. Verificá bien el número.' };
+// Validación completa antes de guardar. Devuelve { ok, msg, focoId }
+function validarTrazabilidadUnidades() {
+  const cat = filaEnEdicion.categoriaTrazabilidad;
+  const campos = CAMPOS_UNIDAD_TRAZ[cat] || ['entrega'];
+  if (cat === 'MANGUEROTE' && !document.getElementById('tResponsableEntrega').value.trim()) {
+    return { ok: false, msg: 'Completá el Responsable de la entrega', focoId: 'tResponsableEntrega' };
   }
-  if (diamNota && m.diametro && m.diametro !== diamNota) {
-    return { nivel: 'error', texto: 'Este N° está registrado como ' + m.diametro + ' y la nota pide ' + diamNota + '.' };
+  for (let i = 1; i <= unidadesTrazN; i++) {
+    for (const campo of campos) {
+      if (!valU(campo, i)) return { ok: false, msg: 'Unidad ' + i + ': completá "' + labelCampoTraz(cat, campo) + '"', focoId: idU(campo, i) };
+    }
   }
-  if (m.estado === 'ENTREGADO' && String(m.np) !== String(filaEnEdicion.np)) {
-    return { nivel: 'error', texto: 'Ya figura ENTREGADO en NP ' + m.np + ' (' + (m.destino || 's/d') + '). Si se devolvió, corregí su estado en la pestaña Manguerotes.' };
+  const evals = verificarTodasLasUnidades();
+  for (let i = 1; i <= evals.length; i++) {
+    const ev = evals[i - 1];
+    if (ev.nivelEntrega === 'error') return { ok: false, msg: 'Unidad ' + i + ': ' + ev.txtEntrega, focoId: idU('entrega', i) };
+    if (ev.nivelRecambio === 'error') return { ok: false, msg: 'Unidad ' + i + ': ' + ev.txtRecambio, focoId: idU('recambio', i) };
+    if (ev.mataNuevo) {
+      if (!valU('capacidad', i)) return { ok: false, msg: 'Unidad ' + i + ': matafuego nuevo, completá la Capacidad (Kg)', focoId: idU('capacidad', i) };
+      if (!valU('tipo', i)) return { ok: false, msg: 'Unidad ' + i + ': matafuego nuevo, completá el Tipo', focoId: idU('tipo', i) };
+      if (!document.getElementById(idU('confirmo', i)).checked) return { ok: false, msg: 'Unidad ' + i + ': matafuego nuevo, confirmá que verificaste el N°', focoId: idU('confirmo', i) };
+    }
   }
-  if (m.estado === 'BAJA') {
-    return { nivel: 'error', texto: 'Este manguerote está dado de BAJA.' };
-  }
-  return { nivel: 'ok', texto: 'Registrado: ' + (m.diametro || '') + ', estado ' + m.estado + ', certificado ' + (m.nCertificado || 's/d') + '.' };
+  return { ok: true };
 }
 
-function verificarMangueroteEntrega() {
-  const info = document.getElementById('trazEntregaInfo');
-  const r = evaluarMangueroteEntrega();
-  info.textContent = r.texto;
-  info.style.color = r.nivel === 'ok' ? 'var(--green-text)' : (r.nivel === 'warn' ? 'var(--amber-text)' : 'var(--red-text)');
-  info.style.fontWeight = r.nivel === 'error' ? '600' : '';
-  // Si está registrado y el certificado del modal está vacío, se completa con el del registro
-  const m = buscarMangueroteCache(document.getElementById('tNElementoEntrega').value);
-  const cert = document.getElementById('tNCertificado');
-  if (m && m.nCertificado && !cert.value.trim()) cert.value = m.nCertificado;
+function recolectarUnidadesTraz() {
+  const lista = [];
+  for (let i = 1; i <= unidadesTrazN; i++) {
+    lista.push({
+      item: i,
+      nElementoEntrega: valU('entrega', i),
+      nElementoRecambio: valU('recambio', i),
+      patenteDestino: valU('patente', i).toUpperCase(),
+      fechaVencRecarga: valU('vencRecarga', i),
+      fechaVencPrueba: valU('vencPrueba', i),
+      fechaCertificacion: valU('fechaCert', i),
+      nCertificado: valU('nCert', i),
+      capacidadKg: valU('capacidad', i),
+      tipoMatafuego: valU('tipo', i)
+    });
+  }
+  return lista;
 }
 
-function verificarMangueroteViejo() {
-  const info = document.getElementById('trazRecambioInfo');
-  const viejo = document.getElementById('tNElementoRecambio').value.trim();
-  const nuevo = document.getElementById('tNElementoEntrega').value.trim();
-  info.style.fontWeight = '';
-  if (!viejo) { info.textContent = 'Si no se retira ningún manguerote, escribí NA'; info.style.color = ''; return; }
-  if (viejo.toUpperCase() === 'NA') { info.textContent = 'Sin recambio'; info.style.color = ''; return; }
-  if (nuevo && normalizarNumero(viejo) === normalizarNumero(nuevo)) {
-    info.textContent = 'El viejo no puede ser el mismo que el que se entrega';
-    info.style.color = 'var(--red-text)'; info.style.fontWeight = '600'; return;
-  }
-  const m = buscarMangueroteCache(viejo);
-  if (m) {
-    info.textContent = 'Registrado (' + (m.destino || 'sin destino') + '). Al guardar queda RETIRADO.';
-    info.style.color = 'var(--green-text)';
-  } else {
-    info.textContent = 'No está en el registro: queda en Trazabilidad, pero no se actualiza el maestro.';
-    info.style.color = 'var(--amber-text)';
-  }
-}
-
-// Informa qué va a pasar con el matafuego que se retira de la unidad:
-// si está en el registro maestro, se lo desasigna de su patente y se deja
-// constancia en Observaciones; si no está, no se toca el maestro.
-function verificarMatafuegoRecambio() {
-  const info = document.getElementById('trazRecambioInfo');
-  const numero = document.getElementById('tNElementoRecambio').value.trim();
-  const entrega = document.getElementById('tNElementoEntrega').value.trim();
-  info.classList.remove('hint-lock');
-  info.style.color = '';
-
-  if (!numero) { info.textContent = ''; return; }
-  if (entrega && numero.toLowerCase() === entrega.toLowerCase()) {
-    info.textContent = 'El N° que recambia no puede ser el mismo que el que entrega';
-    info.classList.add('hint-lock');
-    return;
-  }
-  const existente = matafuegosCache.find(m => m.nMatafuego.trim().toLowerCase() === numero.toLowerCase());
-  if (existente) {
-    info.textContent = 'Registrado (patente actual: ' + (existente.patente || 'sin asignar') + '). Al guardar queda desasignado y marcado como retirado.';
-    info.style.color = 'var(--green-text)';
-  } else {
-    info.textContent = 'No está en el registro de matafuegos: se guarda en Trazabilidad, pero no se actualiza el maestro.';
-    info.style.color = 'var(--amber-text)';
-  }
-}
-document.getElementById('tNElementoRecambio').addEventListener('input', () => {
-  if (filaEnEdicion && filaEnEdicion.categoriaTrazabilidad === 'MATAFUEGO') verificarMatafuegoRecambio();
-});
-
-async function guardarTrazabilidadSiCorresponde(p, valores) {
+async function guardarTrazabilidadSiCorresponde(p, comunes, unidades) {
   const cat = p.categoriaTrazabilidad;
-  if (!cat) return;
-
+  if (!cat || !unidades.length) return;
   try {
     const resp = await apiGet({
-      action: 'guardarTrazabilidad',
+      action: 'guardarTrazabilidadLote',
       filaOrigen: p.fila,
       np: p.np,
       categoria: cat,
       articulo: p.articulo,
       destino: p.destino,
-      fechaEntrega: valores.fechaEntrega, // fecha de cumplimiento = fecha de entrega
-      nElementoEntrega: valores.nElementoEntrega,
-      nElementoRecambio: valores.nElementoRecambio,
-      fechaVencRecarga: valores.fechaVencRecarga,
-      fechaVencPrueba: valores.fechaVencPrueba,
-      fechaCertificacion: valores.fechaCertificacion,
-      nCertificado: valores.nCertificado,
-      patenteDestino: valores.patenteDestino,
-      responsableEntrega: valores.responsableEntrega,
       diametro: diametroDesdeTexto(p.articulo),
-      capacidadKg: valores.capacidadKg,
-      tipoMatafuego: valores.tipoMatafuego,
+      fechaEntrega: comunes.fechaEntrega, // fecha de cumplimiento = fecha de entrega
+      responsableEntrega: comunes.responsableEntrega,
+      items: JSON.stringify(unidades),
       usuario: currentUser.usuario,
       nombreUsuario: currentUser.nombre
     });
-    if (cat === 'MATAFUEGO' && resp.recambioNoRegistrado) {
-      mostrarToast('Trazabilidad guardada. Ojo: el matafuego que se recambia no está en el registro, no se pudo marcar como retirado', 'err');
-    } else if (cat === 'MANGUEROTE' && resp.recambioNoRegistrado) {
-      mostrarToast('Trazabilidad guardada. Ojo: el manguerote viejo no está en el registro, no se pudo marcar como retirado', 'err');
+    const n = resp.unidades || unidades.length;
+    if (resp.recambiosNoRegistrados && resp.recambiosNoRegistrados.length) {
+      mostrarToast('Trazabilidad guardada (' + n + ' u.). Ojo: no están en el registro y no se marcaron como retirados: ' + resp.recambiosNoRegistrados.join(', '), 'err');
     } else {
-      mostrarToast('Trazabilidad guardada', 'ok');
+      mostrarToast('Trazabilidad guardada: ' + n + (n === 1 ? ' unidad' : ' unidades'), 'ok');
     }
-    cargarTrazabilidad(); // refresca el cache local con lo recién guardado
+    cargarTrazabilidad();
     if (cat === 'MATAFUEGO') cargarMatafuegos();
     if (cat === 'MANGUEROTE') cargarManguerotes();
   } catch (err) {
@@ -2117,6 +2113,7 @@ function renderTrazabilidad() {
     <tr>
       <td class="nowrap"><span class="pill p-otro">${escapeHtml(NOMBRE_CATEGORIA_TRAZ[r.categoria] || r.categoria)}</span></td>
       <td class="nowrap">${escapeHtml(String(r.np))}</td>
+      <td class="nowrap" style="text-align:center">${escapeHtml(String(r.item || 1))}</td>
       <td style="white-space:normal;max-width:260px">${escapeHtml(r.articulo || '')}</td>
       <td class="nowrap">${escapeHtml(r.destino || '—')}</td>
       <td class="nowrap">${escapeHtml(r.nElementoEntrega || '—')}</td>
@@ -2136,7 +2133,7 @@ function renderTrazabilidad() {
       <div class="twrap" style="display:block">
         <table>
           <thead><tr>
-            <th>Categoría</th><th>N° NP</th><th>Artículo</th><th>Destino</th>
+            <th>Categoría</th><th>N° NP</th><th>Ítem</th><th>Artículo</th><th>Destino</th>
             <th>N° Entrega</th><th>N° Recambio</th><th>F. Entrega</th>
             <th>F. Venc. Recarga</th><th>F. Venc. Prueba</th><th>F. Certificación</th><th>N° Certificado</th><th>Resp. entrega</th><th>Usuario</th>
           </tr></thead>
@@ -2150,7 +2147,7 @@ function renderTrazabilidad() {
 function exportarTrazabilidadExcel() {
   if (!trazabilidadCache.length) { mostrarToast('No hay datos para exportar', 'err'); return; }
   const filas = trazabilidadCache.map(r => ({
-    'Categoría': NOMBRE_CATEGORIA_TRAZ[r.categoria] || r.categoria, 'N° NP': r.np, 'Artículo': r.articulo, 'Destino': r.destino,
+    'Categoría': NOMBRE_CATEGORIA_TRAZ[r.categoria] || r.categoria, 'N° NP': r.np, 'Ítem': r.item || 1, 'Artículo': r.articulo, 'Destino': r.destino,
     'N° Elemento Entrega': r.nElementoEntrega, 'N° Elemento Recambio': r.nElementoRecambio, 'Fecha Entrega': r.fechaEntrega,
     'Fecha Venc. Recarga': r.fechaVencRecarga, 'Fecha Venc. Prueba': r.fechaVencPrueba,
     'Fecha Certificación': r.fechaCertificacion, 'N° Certificado': r.nCertificado, 'Responsable de la entrega': r.responsableEntrega, 'Usuario': r.usuario, 'Fecha de carga': r.fechaCarga
@@ -2562,56 +2559,12 @@ async function guardarEdicion() {
     ordenCompraInput.value = 'NA';
   }
   if (estado === 'CUMPLIDO' && filaEnEdicion.categoriaTrazabilidad) {
-    const camposTraz = CAMPOS_OBLIGATORIOS_TRAZ[filaEnEdicion.categoriaTrazabilidad] || [];
-    for (const c of camposTraz) {
-      const input = document.getElementById(c.id);
-      if (!input.value.trim()) {
-        mostrarToast('Este artículo requiere trazabilidad: completá "' + c.label + '" antes de guardar', 'err');
-        input.focus();
-        return;
-      }
-    }
-    if (filaEnEdicion.categoriaTrazabilidad === 'MANGUEROTE') {
-      const evaluacion = evaluarMangueroteEntrega();
-      if (evaluacion.nivel === 'error') {
-        mostrarToast(evaluacion.texto, 'err');
-        document.getElementById('tNElementoEntrega').focus();
-        return;
-      }
-      const nuevo = document.getElementById('tNElementoEntrega').value.trim();
-      const viejo = document.getElementById('tNElementoRecambio').value.trim();
-      if (normalizarNumero(nuevo) === normalizarNumero(viejo)) {
-        mostrarToast('El N° de manguerote viejo no puede ser el mismo que el que se entrega', 'err');
-        document.getElementById('tNElementoRecambio').focus();
-        return;
-      }
-    }
-    if (filaEnEdicion.categoriaTrazabilidad === 'MATAFUEGO') {
-      const numero = document.getElementById('tNElementoEntrega').value.trim();
-      const recambio = document.getElementById('tNElementoRecambio').value.trim();
-      if (numero.toLowerCase() === recambio.toLowerCase()) {
-        mostrarToast('El N° de matafuego que recambia no puede ser el mismo que el que entrega', 'err');
-        document.getElementById('tNElementoRecambio').focus();
-        return;
-      }
-      const yaRegistrado = matafuegosCache.find(m => m.nMatafuego.trim().toLowerCase() === numero.toLowerCase());
-      if (!yaRegistrado) {
-        if (!document.getElementById('tCapacidadKg').value.trim()) {
-          mostrarToast('Es un matafuego nuevo: completá la Capacidad (Kg) antes de guardar', 'err');
-          document.getElementById('tCapacidadKg').focus();
-          return;
-        }
-        if (!document.getElementById('tTipoMatafuego').value.trim()) {
-          mostrarToast('Es un matafuego nuevo: completá el Tipo antes de guardar', 'err');
-          document.getElementById('tTipoMatafuego').focus();
-          return;
-        }
-        if (!document.getElementById('tConfirmoNumero').checked) {
-          mostrarToast('Es un matafuego nuevo: confirmá que verificaste el N° antes de guardar', 'err');
-          document.getElementById('tConfirmoNumero').focus();
-          return;
-        }
-      }
+    const v = validarTrazabilidadUnidades();
+    if (!v.ok) {
+      mostrarToast('Trazabilidad — ' + v.msg, 'err');
+      const foco = document.getElementById(v.focoId);
+      if (foco) { foco.scrollIntoView({ block: 'center' }); foco.focus(); }
+      return;
     }
   }
 
@@ -2643,20 +2596,12 @@ async function guardarEdicion() {
     if (idx >= 0) pedidosCache[idx] = data.pedido;
 
     if (filaEnEdicion.categoriaTrazabilidad && estado === 'CUMPLIDO') {
-      const valoresTraz = {
+      const comunes = {
         fechaEntrega: document.getElementById('mFechaCumplimiento').value,
-        nElementoEntrega: document.getElementById('tNElementoEntrega').value.trim(),
-        nElementoRecambio: document.getElementById('tNElementoRecambio').value.trim(),
-        fechaVencRecarga: document.getElementById('tFechaVencRecarga').value,
-        fechaVencPrueba: document.getElementById('tFechaVencPrueba').value,
-        fechaCertificacion: document.getElementById('tFechaCertificacion').value,
-        nCertificado: document.getElementById('tNCertificado').value.trim(),
-        patenteDestino: document.getElementById('tPatenteDestino').value.trim().toUpperCase(),
-        responsableEntrega: document.getElementById('tResponsableEntrega').value.trim(),
-        capacidadKg: document.getElementById('tCapacidadKg').value.trim(),
-        tipoMatafuego: document.getElementById('tTipoMatafuego').value.trim()
+        responsableEntrega: document.getElementById('tResponsableEntrega').value.trim()
       };
-      guardarTrazabilidadSiCorresponde(filaEnEdicion, valoresTraz); // en segundo plano, no bloquea el guardado del pedido
+      // en segundo plano, no bloquea el guardado del pedido
+      guardarTrazabilidadSiCorresponde(filaEnEdicion, comunes, recolectarUnidadesTraz());
     }
 
     mostrarToast('Nota N° ' + data.pedido.np + ' actualizada', 'ok');
