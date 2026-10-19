@@ -635,6 +635,15 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
         <div class="field" id="trazCampoRecambio" style="display:none">
           <label>N° de matafuego que recambia</label>
           <input type="text" id="tNElementoRecambio">
+          <div class="hint" id="trazRecambioInfo"></div>
+        </div>
+      </div>
+
+      <div class="row2" id="trazFilaPatente" style="display:none">
+        <div class="field">
+          <label>Patente de la unidad que lo recibe</label>
+          <input type="text" id="tPatenteDestino" placeholder="Ej: AB123CD">
+          <div class="hint">Se precarga con el Destino de la nota. Corregila si el destino no es una patente (base, sector, etc.)</div>
         </div>
       </div>
 
@@ -1698,6 +1707,7 @@ const CAMPOS_OBLIGATORIOS_TRAZ = {
   MATAFUEGO: [
     { id: 'tNElementoEntrega', label: 'N° de matafuego que entrega' },
     { id: 'tNElementoRecambio', label: 'N° de matafuego que recambia' },
+    { id: 'tPatenteDestino', label: 'Patente de la unidad que lo recibe' },
     { id: 'tFechaVencRecarga', label: 'Fecha vencimiento recarga' },
     { id: 'tFechaVencPrueba', label: 'Fecha vencimiento prueba' }
   ],
@@ -1742,6 +1752,7 @@ function actualizarSeccionTrazabilidad(p, precargarValores) {
   document.getElementById('trazTitulo').innerHTML = '<i class="ti ti-shield-check"></i> Trazabilidad — ' + (NOMBRE_CATEGORIA_TRAZ[cat] || cat);
   document.getElementById('trazLabelEntrega').textContent = LABEL_ENTREGA_TRAZ[cat] || 'N° de elemento';
   document.getElementById('trazCampoRecambio').style.display = cat === 'MATAFUEGO' ? 'block' : 'none';
+  document.getElementById('trazFilaPatente').style.display = cat === 'MATAFUEGO' ? 'grid' : 'none';
   document.getElementById('trazFilaVencimientos').style.display = cat === 'MATAFUEGO' ? 'grid' : 'none';
   document.getElementById('trazFilaCertificacion').style.display = (cat === 'IZAJE' || cat === 'ENGANCHE' || cat === 'SUPERCHUPA' || cat === 'MANOVACUOMETRO' || cat === 'VALVULA_PSV') ? 'grid' : 'none';
   document.getElementById('trazFilaCertificado').style.display = (cat === 'IZAJE' || cat === 'MANGUEROTE') ? 'grid' : 'none';
@@ -1764,10 +1775,14 @@ function actualizarSeccionTrazabilidad(p, precargarValores) {
   document.getElementById('tFechaVencPrueba').value = existente ? isoDesdeDDMMYYYY(existente.fechaVencPrueba) : '';
   document.getElementById('tFechaCertificacion').value = existente ? isoDesdeDDMMYYYY(existente.fechaCertificacion) : '';
   document.getElementById('tNCertificado').value = existente ? (existente.nCertificado || '') : '';
+  document.getElementById('tPatenteDestino').value = String(p.destino || '').trim().toUpperCase();
   document.getElementById('tCapacidadKg').value = '';
   document.getElementById('tTipoMatafuego').value = '';
   document.getElementById('tConfirmoNumero').checked = false;
-  if (cat === 'MATAFUEGO') verificarMatafuegoRegistrado();
+  if (cat === 'MATAFUEGO') {
+    verificarMatafuegoRegistrado();
+    verificarMatafuegoRecambio();
+  }
 }
 
 // Chequea si el N° de matafuego tipeado ya existe en el registro maestro
@@ -1795,7 +1810,39 @@ function verificarMatafuegoRegistrado() {
   }
 }
 document.getElementById('tNElementoEntrega').addEventListener('input', () => {
-  if (filaEnEdicion && filaEnEdicion.categoriaTrazabilidad === 'MATAFUEGO') verificarMatafuegoRegistrado();
+  if (filaEnEdicion && filaEnEdicion.categoriaTrazabilidad === 'MATAFUEGO') {
+    verificarMatafuegoRegistrado();
+    verificarMatafuegoRecambio();
+  }
+});
+
+// Informa qué va a pasar con el matafuego que se retira de la unidad:
+// si está en el registro maestro, se lo desasigna de su patente y se deja
+// constancia en Observaciones; si no está, no se toca el maestro.
+function verificarMatafuegoRecambio() {
+  const info = document.getElementById('trazRecambioInfo');
+  const numero = document.getElementById('tNElementoRecambio').value.trim();
+  const entrega = document.getElementById('tNElementoEntrega').value.trim();
+  info.classList.remove('hint-lock');
+  info.style.color = '';
+
+  if (!numero) { info.textContent = ''; return; }
+  if (entrega && numero.toLowerCase() === entrega.toLowerCase()) {
+    info.textContent = 'El N° que recambia no puede ser el mismo que el que entrega';
+    info.classList.add('hint-lock');
+    return;
+  }
+  const existente = matafuegosCache.find(m => m.nMatafuego.trim().toLowerCase() === numero.toLowerCase());
+  if (existente) {
+    info.textContent = 'Registrado (patente actual: ' + (existente.patente || 'sin asignar') + '). Al guardar queda desasignado y marcado como retirado.';
+    info.style.color = 'var(--green-text)';
+  } else {
+    info.textContent = 'No está en el registro de matafuegos: se guarda en Trazabilidad, pero no se actualiza el maestro.';
+    info.style.color = 'var(--amber-text)';
+  }
+}
+document.getElementById('tNElementoRecambio').addEventListener('input', () => {
+  if (filaEnEdicion && filaEnEdicion.categoriaTrazabilidad === 'MATAFUEGO') verificarMatafuegoRecambio();
 });
 
 async function guardarTrazabilidadSiCorresponde(p, valores) {
@@ -1803,7 +1850,7 @@ async function guardarTrazabilidadSiCorresponde(p, valores) {
   if (!cat) return;
 
   try {
-    await apiGet({
+    const resp = await apiGet({
       action: 'guardarTrazabilidad',
       filaOrigen: p.fila,
       np: p.np,
@@ -1817,11 +1864,17 @@ async function guardarTrazabilidadSiCorresponde(p, valores) {
       fechaVencPrueba: valores.fechaVencPrueba,
       fechaCertificacion: valores.fechaCertificacion,
       nCertificado: valores.nCertificado,
+      patenteDestino: valores.patenteDestino,
       capacidadKg: valores.capacidadKg,
       tipoMatafuego: valores.tipoMatafuego,
-      usuario: currentUser.usuario
+      usuario: currentUser.usuario,
+      nombreUsuario: currentUser.nombre
     });
-    mostrarToast('Trazabilidad guardada', 'ok');
+    if (cat === 'MATAFUEGO' && resp.recambioNoRegistrado) {
+      mostrarToast('Trazabilidad guardada. Ojo: el matafuego que se recambia no está en el registro, no se pudo marcar como retirado', 'err');
+    } else {
+      mostrarToast('Trazabilidad guardada', 'ok');
+    }
     cargarTrazabilidad(); // refresca el cache local con lo recién guardado
     if (cat === 'MATAFUEGO') cargarMatafuegos();
   } catch (err) {
@@ -2135,6 +2188,12 @@ async function guardarEdicion() {
     }
     if (filaEnEdicion.categoriaTrazabilidad === 'MATAFUEGO') {
       const numero = document.getElementById('tNElementoEntrega').value.trim();
+      const recambio = document.getElementById('tNElementoRecambio').value.trim();
+      if (numero.toLowerCase() === recambio.toLowerCase()) {
+        mostrarToast('El N° de matafuego que recambia no puede ser el mismo que el que entrega', 'err');
+        document.getElementById('tNElementoRecambio').focus();
+        return;
+      }
       const yaRegistrado = matafuegosCache.find(m => m.nMatafuego.trim().toLowerCase() === numero.toLowerCase());
       if (!yaRegistrado) {
         if (!document.getElementById('tCapacidadKg').value.trim()) {
@@ -2177,6 +2236,9 @@ async function guardarEdicion() {
       nombreUsuario: currentUser.nombre
     });
 
+    // El backend no conoce el Depósito (se deriva del Centro de costo en el
+    // front): se recalcula acá para que la nota editada no quede "SIN CLASIFICAR".
+    data.pedido.deposito = clasificarDeposito(data.pedido.centroCosto);
     const idx = pedidosCache.findIndex(x => x.fila === filaEnEdicion.fila);
     if (idx >= 0) pedidosCache[idx] = data.pedido;
 
@@ -2189,6 +2251,7 @@ async function guardarEdicion() {
         fechaVencPrueba: document.getElementById('tFechaVencPrueba').value,
         fechaCertificacion: document.getElementById('tFechaCertificacion').value,
         nCertificado: document.getElementById('tNCertificado').value.trim(),
+        patenteDestino: document.getElementById('tPatenteDestino').value.trim().toUpperCase(),
         capacidadKg: document.getElementById('tCapacidadKg').value.trim(),
         tipoMatafuego: document.getElementById('tTipoMatafuego').value.trim()
       };
