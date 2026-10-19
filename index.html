@@ -672,7 +672,7 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
 
     <div id="trazSection" class="traz-section" style="display:none">
       <div class="traz-titulo" id="trazTitulo">Trazabilidad</div>
-      <div class="hint" id="trazHintGeneral" style="margin-bottom:10px">Este artículo requiere trazabilidad <strong>por unidad</strong>: se arma una ficha por cada unidad de la Cantidad de la nota. Todos los campos son obligatorios para guardar en CUMPLIDO. La Fecha de entrega se toma de la Fecha de Cumplimiento.</div>
+      <div class="hint" id="trazHintGeneral" style="margin-bottom:10px">Este artículo requiere trazabilidad <strong>por artículo</strong>: se arma una ficha por cada artículo de la Cantidad de la nota. Todos los campos son obligatorios para guardar en CUMPLIDO. La Fecha de entrega se toma de la Fecha de Cumplimiento.</div>
       <div id="trazAvisoCantidad" class="traz-alerta-nuevo" style="display:none;margin-bottom:10px"></div>
 
       <div class="row2" id="trazFilaResponsable" style="display:none">
@@ -1825,9 +1825,9 @@ function htmlUnidad(cat, i, n) {
       </div>
       <label class="traz-check"><input type="checkbox" id="${idU('confirmo', i)}"> Confirmo que verifiqué el N° de matafuego y es correcto</label>
     </div>`;
-  const copiar = (i === 1 && n > 1) ? `<button type="button" onclick="copiarUnidad1ATodas()"><i class="ti ti-copy"></i> Copiar datos a las demás</button>` : '';
+  const copiar = (i === 1 && n > 1) ? `<button type="button" onclick="copiarUnidad1ATodas()"><i class="ti ti-copy"></i> Copiar datos a los demás</button>` : '';
   return `<div class="traz-unidad" id="${idU('card', i)}">
-    <div class="traz-unidad-top"><span class="traz-unidad-tit">Unidad ${i} de ${n}</span>${copiar}</div>
+    <div class="traz-unidad-top"><span class="traz-unidad-tit">Artículo ${i} de ${n}</span>${copiar}</div>
     ${filas}${extraMatafuego}</div>`;
 }
 
@@ -1849,13 +1849,13 @@ function armarUnidadesTraz(p, cat) {
   unidadesTrazN = n;
 
   document.getElementById('trazTitulo').innerHTML = '<i class="ti ti-shield-check"></i> Trazabilidad — ' +
-    escapeHtml(NOMBRE_CATEGORIA_TRAZ[cat] || cat) + ' · ' + n + (n === 1 ? ' unidad' : ' unidades');
+    escapeHtml(NOMBRE_CATEGORIA_TRAZ[cat] || cat) + ' · ' + n + (n === 1 ? ' artículo' : ' artículos');
   const aviso = document.getElementById('trazAvisoCantidad');
   if (cant.recortada || cant.invalida) {
     aviso.style.display = 'block';
     aviso.innerHTML = cant.recortada
       ? `<i class="ti ti-alert-triangle"></i> La nota tiene Cantidad ${escapeHtml(String(cant.original))}: se muestran las primeras ${MAX_UNIDADES_TRAZ} fichas (máximo por ítem).`
-      : `<i class="ti ti-alert-triangle"></i> La Cantidad de la nota (${escapeHtml(String(cant.original || 'vacía'))}) no es un número válido: se toma 1 unidad.`;
+      : `<i class="ti ti-alert-triangle"></i> La Cantidad de la nota (${escapeHtml(String(cant.original || 'vacía'))}) no es un número válido: se toma 1 artículo.`;
   } else {
     aviso.style.display = 'none';
   }
@@ -1903,7 +1903,7 @@ function copiarUnidad1ATodas() {
     });
   }
   verificarTodasLasUnidades();
-  mostrarToast('Datos de la unidad 1 copiados a las demás (los N° no se copian)', 'ok');
+  mostrarToast('Datos del artículo 1 copiados a los demás (los N° no se copian)', 'ok');
 }
 
 /*******************************************************
@@ -1928,7 +1928,7 @@ function evaluarUnidades() {
 
     // --- N° que se entrega
     if (nEnt && cuentaEnt[nEnt] > 1) {
-      out.nivelEntrega = 'error'; out.txtEntrega = 'Este N° está repetido en otra unidad de esta nota.';
+      out.nivelEntrega = 'error'; out.txtEntrega = 'Este N° está repetido en otro artículo de esta nota.';
     } else if (nEnt && cat === 'MANGUEROTE') {
       const m = buscarMangueroteCache(ent);
       if (!m) { out.nivelEntrega = 'warn'; out.txtEntrega = 'No está en el registro: se da de alta como manguerote ' + (diamNota || '') + ' nuevo.'; }
@@ -1950,7 +1950,7 @@ function evaluarUnidades() {
       } else if (nRec === nEnt) {
         out.nivelRecambio = 'error'; out.txtRecambio = 'No puede ser el mismo N° que el que se entrega.';
       } else if (cuentaRec[nRec] > 1) {
-        out.nivelRecambio = 'error'; out.txtRecambio = 'Este N° viejo está repetido en otra unidad.';
+        out.nivelRecambio = 'error'; out.txtRecambio = 'Este N° viejo está repetido en otro artículo.';
       } else {
         const reg = cat === 'MATAFUEGO' ? buscarMatafuegoCache(rec) : buscarMangueroteCache(rec);
         if (reg) {
@@ -2021,18 +2021,18 @@ function validarTrazabilidadUnidades() {
   }
   for (let i = 1; i <= unidadesTrazN; i++) {
     for (const campo of campos) {
-      if (!valU(campo, i)) return { ok: false, msg: 'Unidad ' + i + ': completá "' + labelCampoTraz(cat, campo) + '"', focoId: idU(campo, i) };
+      if (!valU(campo, i)) return { ok: false, msg: 'Artículo ' + i + ': completá "' + labelCampoTraz(cat, campo) + '"', focoId: idU(campo, i) };
     }
   }
   const evals = verificarTodasLasUnidades();
   for (let i = 1; i <= evals.length; i++) {
     const ev = evals[i - 1];
-    if (ev.nivelEntrega === 'error') return { ok: false, msg: 'Unidad ' + i + ': ' + ev.txtEntrega, focoId: idU('entrega', i) };
-    if (ev.nivelRecambio === 'error') return { ok: false, msg: 'Unidad ' + i + ': ' + ev.txtRecambio, focoId: idU('recambio', i) };
+    if (ev.nivelEntrega === 'error') return { ok: false, msg: 'Artículo ' + i + ': ' + ev.txtEntrega, focoId: idU('entrega', i) };
+    if (ev.nivelRecambio === 'error') return { ok: false, msg: 'Artículo ' + i + ': ' + ev.txtRecambio, focoId: idU('recambio', i) };
     if (ev.mataNuevo) {
-      if (!valU('capacidad', i)) return { ok: false, msg: 'Unidad ' + i + ': matafuego nuevo, completá la Capacidad (Kg)', focoId: idU('capacidad', i) };
-      if (!valU('tipo', i)) return { ok: false, msg: 'Unidad ' + i + ': matafuego nuevo, completá el Tipo', focoId: idU('tipo', i) };
-      if (!document.getElementById(idU('confirmo', i)).checked) return { ok: false, msg: 'Unidad ' + i + ': matafuego nuevo, confirmá que verificaste el N°', focoId: idU('confirmo', i) };
+      if (!valU('capacidad', i)) return { ok: false, msg: 'Artículo ' + i + ': matafuego nuevo, completá la Capacidad (Kg)', focoId: idU('capacidad', i) };
+      if (!valU('tipo', i)) return { ok: false, msg: 'Artículo ' + i + ': matafuego nuevo, completá el Tipo', focoId: idU('tipo', i) };
+      if (!document.getElementById(idU('confirmo', i)).checked) return { ok: false, msg: 'Artículo ' + i + ': matafuego nuevo, confirmá que verificaste el N°', focoId: idU('confirmo', i) };
     }
   }
   return { ok: true };
@@ -2077,9 +2077,9 @@ async function guardarTrazabilidadSiCorresponde(p, comunes, unidades) {
     });
     const n = resp.unidades || unidades.length;
     if (resp.recambiosNoRegistrados && resp.recambiosNoRegistrados.length) {
-      mostrarToast('Trazabilidad guardada (' + n + ' u.). Ojo: no están en el registro y no se marcaron como retirados: ' + resp.recambiosNoRegistrados.join(', '), 'err');
+      mostrarToast('Trazabilidad guardada (' + n + ' art.). Ojo: no están en el registro y no se marcaron como retirados: ' + resp.recambiosNoRegistrados.join(', '), 'err');
     } else {
-      mostrarToast('Trazabilidad guardada: ' + n + (n === 1 ? ' unidad' : ' unidades'), 'ok');
+      mostrarToast('Trazabilidad guardada: ' + n + (n === 1 ? ' artículo' : ' artículos'), 'ok');
     }
     cargarTrazabilidad();
     if (cat === 'MATAFUEGO') cargarMatafuegos();
