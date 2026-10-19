@@ -362,6 +362,7 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
     <div class="tab" id="tab-btn-informe" onclick="goToTab('informe')"><i class="ti ti-mail"></i> Informe</div>
     <div class="tab" id="tab-btn-trazabilidad" onclick="goToTab('trazabilidad')"><i class="ti ti-shield-check"></i> Trazabilidad</div>
     <div class="tab" id="tab-btn-matafuegos" onclick="goToTab('matafuegos')"><i class="ti ti-fire-extinguisher"></i> Matafuegos</div>
+    <div class="tab" id="tab-btn-manguerotes" onclick="goToTab('manguerotes')"><i class="ti ti-circle-dashed"></i> Manguerotes</div>
     <div class="tab" id="tab-btn-log" onclick="goToTab('log')" style="display:none"><i class="ti ti-history"></i> Log de cambios</div>
     <div class="tab" id="tab-btn-usuarios" onclick="goToTab('usuarios')" style="display:none"><i class="ti ti-users"></i> Usuarios</div>
   </div>
@@ -537,6 +538,47 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
     <div id="matafuegosContent"><div class="loading"><div class="spinner"></div>Cargando…</div></div>
   </div>
 
+  <!-- ===== TAB MANGUEROTES (registro maestro 3" y 4") ===== -->
+  <div class="tcontent" id="tab-manguerotes">
+    <div class="filters-bar" style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px">
+      <div class="fgrid" style="flex:1">
+        <div class="fi">
+          <label>Numeración</label>
+          <input type="text" id="filMangNumero" oninput="renderManguerotes()" placeholder="Buscar N°...">
+        </div>
+        <div class="fi">
+          <label>Diámetro</label>
+          <select id="filMangDiametro" onchange="renderManguerotes()">
+            <option value="">Todos</option>
+            <option value='3"'>3"</option>
+            <option value='4"'>4"</option>
+          </select>
+        </div>
+        <div class="fi">
+          <label>Estado</label>
+          <select id="filMangEstado" onchange="renderManguerotes()">
+            <option value="">Todos</option>
+            <option value="EN STOCK">En stock</option>
+            <option value="ENTREGADO">Entregado</option>
+            <option value="RETIRADO">Retirado</option>
+            <option value="BAJA">Baja</option>
+          </select>
+        </div>
+        <div class="fi">
+          <label>Destino / unidad</label>
+          <input type="text" id="filMangDestino" oninput="renderManguerotes()" placeholder="Buscar destino...">
+        </div>
+      </div>
+      <div class="ebtns">
+        <button onclick="exportarManguerotesExcel()"><i class="ti ti-file-spreadsheet"></i> Excel</button>
+        <button onclick="cargarTablaManguerotes()"><i class="ti ti-refresh"></i> Actualizar</button>
+        <button class="primary" onclick="abrirModalMangueroteNuevo()"><i class="ti ti-plus"></i> Nuevo manguerote</button>
+      </div>
+    </div>
+    <div id="kpisManguerotes"></div>
+    <div id="manguerotesContent"><div class="loading"><div class="spinner"></div>Cargando…</div></div>
+  </div>
+
   <!-- ===== TAB LOG DE CAMBIOS (solo ADMINISTRADOR / PROPIETARIO) ===== -->
   <div class="tcontent" id="tab-log">
     <div class="tbl-card">
@@ -630,10 +672,11 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
       <div class="row2">
         <div class="field">
           <label id="trazLabelEntrega">N° de elemento que entrega</label>
-          <input type="text" id="tNElementoEntrega">
+          <input type="text" id="tNElementoEntrega" list="lstManguerotesStock" autocomplete="off">
+          <div class="hint" id="trazEntregaInfo"></div>
         </div>
         <div class="field" id="trazCampoRecambio" style="display:none">
-          <label>N° de matafuego que recambia</label>
+          <label id="trazLabelRecambio">N° de matafuego que recambia</label>
           <input type="text" id="tNElementoRecambio">
           <div class="hint" id="trazRecambioInfo"></div>
         </div>
@@ -669,7 +712,13 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
           <label>N° de certificado</label>
           <input type="text" id="tNCertificado">
         </div>
+        <div class="field" id="trazCampoResponsable" style="display:none">
+          <label>Responsable de la entrega</label>
+          <input type="text" id="tResponsableEntrega" list="lstResponsablesEntrega">
+          <datalist id="lstResponsablesEntrega"></datalist>
+        </div>
       </div>
+      <datalist id="lstManguerotesStock"></datalist>
 
       <div id="trazMatafuegoRegistrado" class="traz-info-registrado" style="display:none"></div>
 
@@ -797,6 +846,53 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
   </div>
 </div>
 
+<!-- MODAL DE MANGUEROTE (alta manual / edición) -->
+<div class="modal-overlay" id="mangModalOverlay">
+  <div class="modal">
+    <div class="modal-title" id="mangModalTitulo"><i class="ti ti-circle-dashed"></i> Editar manguerote</div>
+    <div class="modal-sub" id="mangModalSub">—</div>
+
+    <div class="row2">
+      <div class="field">
+        <label>Numeración</label>
+        <input type="text" id="mangNumeracion" placeholder="Ej: 0129211">
+        <div class="hint" id="mangHintNumeracion"></div>
+      </div>
+      <div class="field">
+        <label>Diámetro</label>
+        <select id="mangDiametro">
+          <option value='3"'>3"</option>
+          <option value='4"'>4"</option>
+        </select>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>N° de certificado</label>
+        <input type="text" id="mangCertificado" placeholder="Ej: END-94">
+      </div>
+      <div class="field" id="mangCampoEstado">
+        <label>Estado</label>
+        <select id="mangEstado">
+          <option value="EN STOCK">EN STOCK</option>
+          <option value="ENTREGADO">ENTREGADO</option>
+          <option value="RETIRADO">RETIRADO</option>
+          <option value="BAJA">BAJA</option>
+        </select>
+      </div>
+    </div>
+    <div class="field">
+      <label>Observaciones</label>
+      <textarea id="mangObservaciones" placeholder="Notas sobre este manguerote"></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button onclick="cerrarModalManguerote()">Cancelar</button>
+      <button class="primary" id="btnGuardarManguerote" onclick="guardarManguerote()"><i class="ti ti-device-floppy"></i> Guardar</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 </div><!-- /appRoot -->
@@ -816,6 +912,8 @@ let matafuegosCache = [];
 let filaEnEdicion = null;
 let usuarioEnEdicion = null;
 let matafuegoEnEdicion = null;
+let manguerotesCache = [];
+let mangueroteEnEdicion = null; // null = alta nueva
 let modoModalMatafuego = 'editar'; // 'editar' | 'nuevo'
 let vistaActual = 'articulos';
 let charts = {};
@@ -911,6 +1009,7 @@ function mostrarApp() {
   cargarUsuarios(); // todos los roles la necesitan: alimenta el desplegable de Responsable
   cargarTrazabilidad();
   cargarMatafuegos();
+  cargarManguerotes();
   cargarPedidos();
 }
 
@@ -940,6 +1039,7 @@ function goToTab(id) {
   if (id === 'informe') renderInforme();
   if (id === 'trazabilidad') cargarTablaTrazabilidad();
   if (id === 'matafuegos') cargarTablaMatafuegos();
+  if (id === 'manguerotes') cargarTablaManguerotes();
   if (id === 'log') cargarLog();
   if (id === 'usuarios') cargarUsuarios();
 }
@@ -1699,7 +1799,7 @@ function isoDesdeDDMMYYYY(str) {
 }
 
 const NOMBRE_CATEGORIA_TRAZ = { MATAFUEGO: 'Matafuego', IZAJE: 'Elemento de izaje', ENGANCHE: 'Perno de enganche', SUPERCHUPA: 'Perno superchupa', MANOVACUOMETRO: 'Manovacuómetro', VALVULA_PSV: 'Válvula PSV', MANGUEROTE: 'Manguerote' };
-const LABEL_ENTREGA_TRAZ = { MATAFUEGO: 'N° de matafuego que entrega', IZAJE: 'N° de elemento', ENGANCHE: 'N° de elemento', SUPERCHUPA: 'N° de elemento', MANOVACUOMETRO: 'N° de elemento', VALVULA_PSV: 'N° de elemento', MANGUEROTE: 'N° de manguerote' };
+const LABEL_ENTREGA_TRAZ = { MATAFUEGO: 'N° de matafuego que entrega', IZAJE: 'N° de elemento', ENGANCHE: 'N° de elemento', SUPERCHUPA: 'N° de elemento', MANOVACUOMETRO: 'N° de elemento', VALVULA_PSV: 'N° de elemento', MANGUEROTE: 'N° de manguerote que se entrega' };
 
 // Campos obligatorios por categoría cuando el Estado que se guarda es CUMPLIDO:
 // TODOS los campos que quedan visibles para esa categoría, sin excepción.
@@ -1733,8 +1833,10 @@ const CAMPOS_OBLIGATORIOS_TRAZ = {
     { id: 'tFechaCertificacion', label: 'Fecha de certificación' }
   ],
   MANGUEROTE: [
-    { id: 'tNElementoEntrega', label: 'N° de manguerote' },
-    { id: 'tNCertificado', label: 'N° de certificado' }
+    { id: 'tNElementoEntrega', label: 'N° de manguerote que se entrega' },
+    { id: 'tNElementoRecambio', label: 'N° de manguerote viejo (o NA si no hay recambio)' },
+    { id: 'tNCertificado', label: 'N° de certificado' },
+    { id: 'tResponsableEntrega', label: 'Responsable de la entrega' }
   ]
 };
 
@@ -1751,7 +1853,9 @@ function actualizarSeccionTrazabilidad(p, precargarValores) {
 
   document.getElementById('trazTitulo').innerHTML = '<i class="ti ti-shield-check"></i> Trazabilidad — ' + (NOMBRE_CATEGORIA_TRAZ[cat] || cat);
   document.getElementById('trazLabelEntrega').textContent = LABEL_ENTREGA_TRAZ[cat] || 'N° de elemento';
-  document.getElementById('trazCampoRecambio').style.display = cat === 'MATAFUEGO' ? 'block' : 'none';
+  document.getElementById('trazCampoRecambio').style.display = (cat === 'MATAFUEGO' || cat === 'MANGUEROTE') ? 'block' : 'none';
+  document.getElementById('trazLabelRecambio').textContent = cat === 'MANGUEROTE' ? 'N° de manguerote viejo (NA si no hay)' : 'N° de matafuego que recambia';
+  document.getElementById('trazCampoResponsable').style.display = cat === 'MANGUEROTE' ? 'block' : 'none';
   document.getElementById('trazFilaPatente').style.display = cat === 'MATAFUEGO' ? 'grid' : 'none';
   document.getElementById('trazFilaVencimientos').style.display = cat === 'MATAFUEGO' ? 'grid' : 'none';
   document.getElementById('trazFilaCertificacion').style.display = (cat === 'IZAJE' || cat === 'ENGANCHE' || cat === 'SUPERCHUPA' || cat === 'MANOVACUOMETRO' || cat === 'VALVULA_PSV') ? 'grid' : 'none';
@@ -1763,6 +1867,14 @@ function actualizarSeccionTrazabilidad(p, precargarValores) {
   } else {
     document.getElementById('trazMatafuegoRegistrado').style.display = 'none';
     document.getElementById('trazMatafuegoNuevo').style.display = 'none';
+  }
+  document.getElementById('trazEntregaInfo').textContent = '';
+  if (cat === 'MANGUEROTE') {
+    poblarSugerenciasManguerote(p);
+    verificarMangueroteEntrega();
+    verificarMangueroteViejo();
+  } else {
+    document.getElementById('lstManguerotesStock').innerHTML = '';
   }
 
   // Los valores ya cargados solo se releen al abrir el modal, no cada vez que
@@ -1776,12 +1888,17 @@ function actualizarSeccionTrazabilidad(p, precargarValores) {
   document.getElementById('tFechaCertificacion').value = existente ? isoDesdeDDMMYYYY(existente.fechaCertificacion) : '';
   document.getElementById('tNCertificado').value = existente ? (existente.nCertificado || '') : '';
   document.getElementById('tPatenteDestino').value = String(p.destino || '').trim().toUpperCase();
+  document.getElementById('tResponsableEntrega').value = existente && existente.responsableEntrega ? existente.responsableEntrega : (currentUser ? currentUser.nombre : '');
   document.getElementById('tCapacidadKg').value = '';
   document.getElementById('tTipoMatafuego').value = '';
   document.getElementById('tConfirmoNumero').checked = false;
   if (cat === 'MATAFUEGO') {
     verificarMatafuegoRegistrado();
     verificarMatafuegoRecambio();
+  }
+  if (cat === 'MANGUEROTE') {
+    verificarMangueroteEntrega();
+    verificarMangueroteViejo();
   }
 }
 
@@ -1814,7 +1931,96 @@ document.getElementById('tNElementoEntrega').addEventListener('input', () => {
     verificarMatafuegoRegistrado();
     verificarMatafuegoRecambio();
   }
+  if (filaEnEdicion && filaEnEdicion.categoriaTrazabilidad === 'MANGUEROTE') {
+    verificarMangueroteEntrega();
+    verificarMangueroteViejo();
+  }
 });
+document.getElementById('tNElementoRecambio').addEventListener('input', () => {
+  if (filaEnEdicion && filaEnEdicion.categoriaTrazabilidad === 'MANGUEROTE') verificarMangueroteViejo();
+});
+
+/*******************************************************
+ * MANGUEROTES — verificaciones en vivo dentro de Gestionar
+ *******************************************************/
+// "0129201" y "129201" son el mismo N° (Sheets a veces se come el cero)
+function normalizarNumero(v) {
+  return String(v == null ? '' : v).trim().toUpperCase().replace(/^0+(?=\d)/, '');
+}
+function diametroDesdeTexto(texto) {
+  const m = String(texto || '').toUpperCase().match(/(\d+(?:[.,]\d+)?)\s*(?:''|"|”|″|´´|’’|PULG)/);
+  return m ? m[1].replace(',', '.') + '"' : '';
+}
+function buscarMangueroteCache(numero) {
+  const n = normalizarNumero(numero);
+  return n ? manguerotesCache.find(m => normalizarNumero(m.numeracion) === n) : null;
+}
+
+// Sugerencias del campo "N° que se entrega": los EN STOCK del mismo diámetro
+// que pide la nota. Y la lista de responsables = usuarios del sistema.
+function poblarSugerenciasManguerote(p) {
+  const diam = diametroDesdeTexto(p.articulo);
+  document.getElementById('lstManguerotesStock').innerHTML = manguerotesCache
+    .filter(m => m.numeracion && m.estado === 'EN STOCK' && (!diam || m.diametro === diam))
+    .map(m => `<option value="${escapeHtml(m.numeracion)}">${escapeHtml(m.diametro)} · Cert. ${escapeHtml(m.nCertificado || 's/d')}</option>`).join('');
+  document.getElementById('lstResponsablesEntrega').innerHTML =
+    [...new Set(usuariosCache.filter(u => u.activo).map(u => u.nombre))].sort().map(n => `<option value="${escapeHtml(n)}">`).join('');
+}
+
+// Devuelve { nivel: 'ok'|'warn'|'error', texto } para el manguerote que se entrega
+function evaluarMangueroteEntrega() {
+  if (!filaEnEdicion) return { nivel: 'ok', texto: '' };
+  const numero = document.getElementById('tNElementoEntrega').value.trim();
+  if (!numero) return { nivel: 'ok', texto: '' };
+  const diamNota = diametroDesdeTexto(filaEnEdicion.articulo);
+  const m = buscarMangueroteCache(numero);
+  if (!m) {
+    return { nivel: 'warn', texto: 'No está en el registro: se va a dar de alta como manguerote ' + (diamNota || '') + ' nuevo. Verificá bien el número.' };
+  }
+  if (diamNota && m.diametro && m.diametro !== diamNota) {
+    return { nivel: 'error', texto: 'Este N° está registrado como ' + m.diametro + ' y la nota pide ' + diamNota + '.' };
+  }
+  if (m.estado === 'ENTREGADO' && String(m.np) !== String(filaEnEdicion.np)) {
+    return { nivel: 'error', texto: 'Ya figura ENTREGADO en NP ' + m.np + ' (' + (m.destino || 's/d') + '). Si se devolvió, corregí su estado en la pestaña Manguerotes.' };
+  }
+  if (m.estado === 'BAJA') {
+    return { nivel: 'error', texto: 'Este manguerote está dado de BAJA.' };
+  }
+  return { nivel: 'ok', texto: 'Registrado: ' + (m.diametro || '') + ', estado ' + m.estado + ', certificado ' + (m.nCertificado || 's/d') + '.' };
+}
+
+function verificarMangueroteEntrega() {
+  const info = document.getElementById('trazEntregaInfo');
+  const r = evaluarMangueroteEntrega();
+  info.textContent = r.texto;
+  info.style.color = r.nivel === 'ok' ? 'var(--green-text)' : (r.nivel === 'warn' ? 'var(--amber-text)' : 'var(--red-text)');
+  info.style.fontWeight = r.nivel === 'error' ? '600' : '';
+  // Si está registrado y el certificado del modal está vacío, se completa con el del registro
+  const m = buscarMangueroteCache(document.getElementById('tNElementoEntrega').value);
+  const cert = document.getElementById('tNCertificado');
+  if (m && m.nCertificado && !cert.value.trim()) cert.value = m.nCertificado;
+}
+
+function verificarMangueroteViejo() {
+  const info = document.getElementById('trazRecambioInfo');
+  const viejo = document.getElementById('tNElementoRecambio').value.trim();
+  const nuevo = document.getElementById('tNElementoEntrega').value.trim();
+  info.style.fontWeight = '';
+  if (!viejo) { info.textContent = 'Si no se retira ningún manguerote, escribí NA'; info.style.color = ''; return; }
+  if (viejo.toUpperCase() === 'NA') { info.textContent = 'Sin recambio'; info.style.color = ''; return; }
+  if (nuevo && normalizarNumero(viejo) === normalizarNumero(nuevo)) {
+    info.textContent = 'El viejo no puede ser el mismo que el que se entrega';
+    info.style.color = 'var(--red-text)'; info.style.fontWeight = '600'; return;
+  }
+  const m = buscarMangueroteCache(viejo);
+  if (m) {
+    info.textContent = 'Registrado (' + (m.destino || 'sin destino') + '). Al guardar queda RETIRADO.';
+    info.style.color = 'var(--green-text)';
+  } else {
+    info.textContent = 'No está en el registro: queda en Trazabilidad, pero no se actualiza el maestro.';
+    info.style.color = 'var(--amber-text)';
+  }
+}
 
 // Informa qué va a pasar con el matafuego que se retira de la unidad:
 // si está en el registro maestro, se lo desasigna de su patente y se deja
@@ -1865,6 +2071,8 @@ async function guardarTrazabilidadSiCorresponde(p, valores) {
       fechaCertificacion: valores.fechaCertificacion,
       nCertificado: valores.nCertificado,
       patenteDestino: valores.patenteDestino,
+      responsableEntrega: valores.responsableEntrega,
+      diametro: diametroDesdeTexto(p.articulo),
       capacidadKg: valores.capacidadKg,
       tipoMatafuego: valores.tipoMatafuego,
       usuario: currentUser.usuario,
@@ -1872,11 +2080,14 @@ async function guardarTrazabilidadSiCorresponde(p, valores) {
     });
     if (cat === 'MATAFUEGO' && resp.recambioNoRegistrado) {
       mostrarToast('Trazabilidad guardada. Ojo: el matafuego que se recambia no está en el registro, no se pudo marcar como retirado', 'err');
+    } else if (cat === 'MANGUEROTE' && resp.recambioNoRegistrado) {
+      mostrarToast('Trazabilidad guardada. Ojo: el manguerote viejo no está en el registro, no se pudo marcar como retirado', 'err');
     } else {
       mostrarToast('Trazabilidad guardada', 'ok');
     }
     cargarTrazabilidad(); // refresca el cache local con lo recién guardado
     if (cat === 'MATAFUEGO') cargarMatafuegos();
+    if (cat === 'MANGUEROTE') cargarManguerotes();
   } catch (err) {
     mostrarToast('El pedido se guardó, pero la trazabilidad no: ' + err.message, 'err');
   }
@@ -1915,6 +2126,7 @@ function renderTrazabilidad() {
       <td class="nowrap">${escapeHtml(r.fechaVencPrueba || '—')}</td>
       <td class="nowrap">${escapeHtml(r.fechaCertificacion || '—')}</td>
       <td class="nowrap">${escapeHtml(r.nCertificado || '—')}</td>
+      <td class="nowrap">${escapeHtml(r.responsableEntrega || '—')}</td>
       <td class="nowrap">${escapeHtml(r.usuario || '—')}</td>
     </tr>
   `).join('');
@@ -1926,7 +2138,7 @@ function renderTrazabilidad() {
           <thead><tr>
             <th>Categoría</th><th>N° NP</th><th>Artículo</th><th>Destino</th>
             <th>N° Entrega</th><th>N° Recambio</th><th>F. Entrega</th>
-            <th>F. Venc. Recarga</th><th>F. Venc. Prueba</th><th>F. Certificación</th><th>N° Certificado</th><th>Usuario</th>
+            <th>F. Venc. Recarga</th><th>F. Venc. Prueba</th><th>F. Certificación</th><th>N° Certificado</th><th>Resp. entrega</th><th>Usuario</th>
           </tr></thead>
           <tbody>${filas}</tbody>
         </table>
@@ -1941,7 +2153,7 @@ function exportarTrazabilidadExcel() {
     'Categoría': NOMBRE_CATEGORIA_TRAZ[r.categoria] || r.categoria, 'N° NP': r.np, 'Artículo': r.articulo, 'Destino': r.destino,
     'N° Elemento Entrega': r.nElementoEntrega, 'N° Elemento Recambio': r.nElementoRecambio, 'Fecha Entrega': r.fechaEntrega,
     'Fecha Venc. Recarga': r.fechaVencRecarga, 'Fecha Venc. Prueba': r.fechaVencPrueba,
-    'Fecha Certificación': r.fechaCertificacion, 'N° Certificado': r.nCertificado, 'Usuario': r.usuario, 'Fecha de carga': r.fechaCarga
+    'Fecha Certificación': r.fechaCertificacion, 'N° Certificado': r.nCertificado, 'Responsable de la entrega': r.responsableEntrega, 'Usuario': r.usuario, 'Fecha de carga': r.fechaCarga
   }));
   const ws = XLSX.utils.json_to_sheet(filas);
   const wb = XLSX.utils.book_new();
@@ -2139,6 +2351,179 @@ document.getElementById('mataModalOverlay').addEventListener('click', (ev) => {
   if (ev.target.id === 'mataModalOverlay') cerrarModalMatafuego();
 });
 
+/*******************************************************
+ * TAB MANGUEROTES
+ *******************************************************/
+const ESTILO_ESTADO_MANG = { 'EN STOCK': 'p-pendiente', 'ENTREGADO': 'p-cumplido', 'RETIRADO': 'p-proceso', 'BAJA': 'p-rechazado' };
+
+async function cargarManguerotes() {
+  try {
+    const data = await apiGet({ action: 'getManguerotes' });
+    manguerotesCache = data.manguerotes;
+  } catch (err) {
+    console.error('No se pudo cargar el registro de manguerotes:', err);
+  }
+}
+
+async function cargarTablaManguerotes() {
+  document.getElementById('manguerotesContent').innerHTML = '<div class="loading"><div class="spinner"></div>Cargando…</div>';
+  await cargarManguerotes();
+  renderManguerotes();
+}
+
+function manguerotesFiltrados() {
+  const numero = normalizarNumero(document.getElementById('filMangNumero').value);
+  const diametro = document.getElementById('filMangDiametro').value;
+  const estado = document.getElementById('filMangEstado').value;
+  const destino = document.getElementById('filMangDestino').value.trim().toLowerCase();
+  return manguerotesCache.filter(m => {
+    if (numero && !normalizarNumero(m.numeracion).includes(numero)) return false;
+    if (diametro && m.diametro !== diametro) return false;
+    if (estado && m.estado !== estado) return false;
+    if (destino && !String(m.destino || '').toLowerCase().includes(destino)) return false;
+    return true;
+  });
+}
+
+function renderManguerotes() {
+  const registros = manguerotesFiltrados();
+  const contar = (fn) => registros.filter(fn).length;
+  const sinNumerar = contar(m => !m.numeracion);
+
+  const kpi = (lbl, val, clase) => `<div class="kpi ${clase || ''}"><div class="lbl">${escapeHtml(lbl)}</div><div class="val">${val}</div></div>`;
+  document.getElementById('kpisManguerotes').innerHTML = `
+    <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
+      ${kpi('Total (con filtros)', registros.length)}
+      ${kpi('En stock', contar(m => m.estado === 'EN STOCK'), '')}
+      ${kpi('Entregados', contar(m => m.estado === 'ENTREGADO'), 'ok')}
+      ${kpi('Retirados / Baja', contar(m => m.estado === 'RETIRADO' || m.estado === 'BAJA'), 'warn')}
+    </div>
+    <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
+      ${kpi('3" en stock', contar(m => m.diametro === '3"' && m.estado === 'EN STOCK'))}
+      ${kpi('4" en stock', contar(m => m.diametro === '4"' && m.estado === 'EN STOCK'))}
+      ${kpi('Sin certificado', contar(m => !m.nCertificado), contar(m => !m.nCertificado) ? 'danger' : 'ok')}
+      ${kpi('Sin numerar', sinNumerar, sinNumerar ? 'warn' : 'ok')}
+    </div>`;
+
+  const cont = document.getElementById('manguerotesContent');
+  if (!registros.length) {
+    cont.innerHTML = '<div class="tbl-card"><div class="empty">No hay manguerotes que coincidan con los filtros</div></div>';
+    return;
+  }
+  const filas = registros.map(m => `
+    <tr>
+      <td class="nowrap"><strong>${m.numeracion ? escapeHtml(m.numeracion) : '<span style="color:var(--amber-text)">SIN NUMERAR</span>'}</strong></td>
+      <td class="nowrap">${escapeHtml(m.diametro || '—')}</td>
+      <td class="nowrap"><span class="pill ${ESTILO_ESTADO_MANG[m.estado] || 'p-otro'}">${escapeHtml(m.estado)}</span></td>
+      <td class="nowrap">${m.nCertificado ? escapeHtml(m.nCertificado) : '<span style="color:var(--red-text);font-weight:600">FALTA</span>'}</td>
+      <td class="nowrap">${escapeHtml(m.destino || '—')}</td>
+      <td class="nowrap">${escapeHtml(String(m.np || '—'))}</td>
+      <td class="nowrap">${escapeHtml(m.fechaEntrega || '—')}</td>
+      <td class="nowrap">${escapeHtml(m.responsableEntrega || '—')}</td>
+      <td class="nowrap">${escapeHtml(m.nViejo || '—')}</td>
+      <td style="white-space:pre-line;max-width:260px">${escapeHtml(m.observaciones || '—')}</td>
+      <td class="nowrap"><button class="btn-edit" onclick="abrirModalManguerote(${m.fila})"><i class="ti ti-edit"></i> Editar</button></td>
+    </tr>`).join('');
+  cont.innerHTML = `
+    <div class="tbl-card">
+      <div class="twrap" style="display:block">
+        <table>
+          <thead><tr>
+            <th>Numeración</th><th>Diám.</th><th>Estado</th><th>N° Certificado</th><th>Destino / unidad</th>
+            <th>N° NP</th><th>F. Entrega</th><th>Resp. entrega</th><th>N° viejo</th><th>Observaciones</th><th></th>
+          </tr></thead>
+          <tbody>${filas}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+function exportarManguerotesExcel() {
+  const registros = manguerotesFiltrados();
+  if (!registros.length) { mostrarToast('No hay datos para exportar', 'err'); return; }
+  const filas = registros.map(m => ({
+    'Código': m.codigo, 'Detalle': m.detalle, 'Numeración': m.numeracion, 'Diámetro': m.diametro, 'Estado': m.estado,
+    'N° Certificado': m.nCertificado, 'Destino / unidad': m.destino, 'N° NP entrega': m.np, 'Fecha entrega': m.fechaEntrega,
+    'Responsable de la entrega': m.responsableEntrega, 'N° manguerote viejo': m.nViejo, 'Observaciones': m.observaciones
+  }));
+  const ws = XLSX.utils.json_to_sheet(filas);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Manguerotes');
+  XLSX.writeFile(wb, 'manguerotes_' + new Date().toISOString().slice(0,10) + '.xlsx');
+}
+
+function abrirModalManguerote(fila) {
+  const m = manguerotesCache.find(x => x.fila === fila);
+  if (!m) return;
+  mangueroteEnEdicion = m;
+  document.getElementById('mangModalTitulo').innerHTML = '<i class="ti ti-circle-dashed"></i> Editar manguerote';
+  document.getElementById('mangModalSub').textContent = (m.detalle || '') + (m.np ? ' · Entregado en NP ' + m.np : '');
+  const num = document.getElementById('mangNumeracion');
+  num.value = m.numeracion || '';
+  num.disabled = !!m.numeracion; // solo se puede asignar si estaba sin numerar
+  document.getElementById('mangHintNumeracion').textContent = m.numeracion ? 'La numeración asignada no se cambia desde el tablero' : 'Asigná el N° grabado en el manguerote';
+  const diam = document.getElementById('mangDiametro');
+  diam.value = m.diametro || '3"';
+  diam.disabled = true;
+  document.getElementById('mangCertificado').value = m.nCertificado || '';
+  document.getElementById('mangEstado').value = m.estado || 'EN STOCK';
+  document.getElementById('mangCampoEstado').style.display = 'block';
+  document.getElementById('mangObservaciones').value = m.observaciones || '';
+  document.getElementById('mangModalOverlay').classList.add('open');
+}
+
+function abrirModalMangueroteNuevo() {
+  mangueroteEnEdicion = null;
+  document.getElementById('mangModalTitulo').innerHTML = '<i class="ti ti-circle-dashed"></i> Nuevo manguerote';
+  document.getElementById('mangModalSub').textContent = 'Queda EN STOCK, con el código y detalle de catálogo del diámetro elegido';
+  const num = document.getElementById('mangNumeracion');
+  num.value = ''; num.disabled = false;
+  document.getElementById('mangHintNumeracion').textContent = 'N° grabado en el manguerote';
+  const diam = document.getElementById('mangDiametro');
+  diam.value = '3"'; diam.disabled = false;
+  document.getElementById('mangCertificado').value = '';
+  document.getElementById('mangCampoEstado').style.display = 'none';
+  document.getElementById('mangObservaciones').value = '';
+  document.getElementById('mangModalOverlay').classList.add('open');
+}
+
+function cerrarModalManguerote() {
+  document.getElementById('mangModalOverlay').classList.remove('open');
+  mangueroteEnEdicion = null;
+}
+
+async function guardarManguerote() {
+  const numeracion = document.getElementById('mangNumeracion').value.trim();
+  const nCertificado = document.getElementById('mangCertificado').value.trim();
+  const observaciones = document.getElementById('mangObservaciones').value.trim();
+  if (!mangueroteEnEdicion && !numeracion) { mostrarToast('Ingresá la numeración', 'err'); return; }
+
+  const btn = document.getElementById('btnGuardarManguerote');
+  btn.disabled = true; btn.textContent = 'Guardando…';
+  try {
+    if (mangueroteEnEdicion) {
+      await apiGet({ action: 'actualizarManguerote', fila: mangueroteEnEdicion.fila, numeracion, nCertificado,
+        estado: document.getElementById('mangEstado').value, observaciones });
+      mostrarToast('Manguerote actualizado', 'ok');
+    } else {
+      await apiGet({ action: 'crearManguerote', numeracion, diametro: document.getElementById('mangDiametro').value, nCertificado, observaciones });
+      mostrarToast('Manguerote creado', 'ok');
+    }
+    cerrarModalManguerote();
+    await cargarManguerotes();
+    renderManguerotes();
+  } catch (err) {
+    mostrarToast('Error al guardar: ' + err.message, 'err');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ti ti-device-floppy"></i> Guardar';
+  }
+}
+
+document.getElementById('mangModalOverlay').addEventListener('click', (ev) => {
+  if (ev.target.id === 'mangModalOverlay') cerrarModalManguerote();
+});
+
 function cerrarModal() {
   document.getElementById('modalOverlay').classList.remove('open');
   filaEnEdicion = null;
@@ -2183,6 +2568,21 @@ async function guardarEdicion() {
       if (!input.value.trim()) {
         mostrarToast('Este artículo requiere trazabilidad: completá "' + c.label + '" antes de guardar', 'err');
         input.focus();
+        return;
+      }
+    }
+    if (filaEnEdicion.categoriaTrazabilidad === 'MANGUEROTE') {
+      const evaluacion = evaluarMangueroteEntrega();
+      if (evaluacion.nivel === 'error') {
+        mostrarToast(evaluacion.texto, 'err');
+        document.getElementById('tNElementoEntrega').focus();
+        return;
+      }
+      const nuevo = document.getElementById('tNElementoEntrega').value.trim();
+      const viejo = document.getElementById('tNElementoRecambio').value.trim();
+      if (normalizarNumero(nuevo) === normalizarNumero(viejo)) {
+        mostrarToast('El N° de manguerote viejo no puede ser el mismo que el que se entrega', 'err');
+        document.getElementById('tNElementoRecambio').focus();
         return;
       }
     }
@@ -2252,6 +2652,7 @@ async function guardarEdicion() {
         fechaCertificacion: document.getElementById('tFechaCertificacion').value,
         nCertificado: document.getElementById('tNCertificado').value.trim(),
         patenteDestino: document.getElementById('tPatenteDestino').value.trim().toUpperCase(),
+        responsableEntrega: document.getElementById('tResponsableEntrega').value.trim(),
         capacidadKg: document.getElementById('tCapacidadKg').value.trim(),
         tipoMatafuego: document.getElementById('tTipoMatafuego').value.trim()
       };
