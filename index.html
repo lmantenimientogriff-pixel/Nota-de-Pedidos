@@ -282,7 +282,7 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
   <div class="hleft">
     <span class="logo-badge">GRIFFOULIERE</span>
     <span class="htitle">Notas de Pedido</span>
-    <span class="hsub">Tablero de gestión · mostrando 2026 en adelante · <span title="Versión del tablero">v20.10.26-d</span></span>
+    <span class="hsub">Tablero de gestión · mostrando 2026 en adelante · <span title="Versión del tablero">v20.10.26-f</span></span>
   </div>
   <div class="user-bar">
     <span class="uname" id="userNombre">—</span>
@@ -857,6 +857,8 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
     </div>
     <div class="row2">
       <div class="field"><label>Fecha registro</label><input type="date" id="pernoFechaRegistro"></div>
+      <div class="field" id="pernoCampoNp"><label>N° NP (nota de pedido)</label><input type="text" id="pernoNp">
+        <div class="hint">Solo si no se pudo vincular sola por la transferencia</div></div>
     </div>
     <div class="field"><label>Observaciones</label><textarea id="pernoObservaciones"></textarea></div>
     <div class="modal-actions">
@@ -2570,7 +2572,7 @@ function renderPernos() {
   cont.innerHTML = `
     <div class="tbl-card"><div class="twrap" style="display:block"><table>
       <thead><tr><th>N°</th><th>Tipo</th><th>Material</th><th>Estado</th><th>Unidad</th><th>F. cert./ensayo</th><th>N° certificado</th>
-        <th>N° NP</th><th>N° Transferencia</th><th>F. colocación</th><th>Reemplazó a</th><th>Lote</th><th>OC</th><th>N° SRA</th><th>Responsable</th><th>Observaciones</th><th></th></tr></thead>
+        <th>N° NP</th><th>N° Transferencia</th><th>F. entrega</th><th>Reemplazó a</th><th>Lote</th><th>OC</th><th>N° SRA</th><th>Responsable</th><th>Observaciones</th><th></th></tr></thead>
       <tbody>${filas}</tbody>
     </table></div></div>`;
 }
@@ -2581,7 +2583,7 @@ function exportarPernosExcel() {
   const ws = XLSX.utils.json_to_sheet(regs.map(x => ({
     'N° elemento': x.numero, 'Tipo': x.tipo, 'Material': x.material, 'Código': x.codigo, 'Artículo': x.articulo,
     'Estado': x.estado, 'Unidad': x.unidad, 'Fecha cert./ensayo': x.fechaCert, 'N° certificado': x.nCertificado,
-    'N° NP': x.np, 'N° Transferencia': x.transferencia, 'Fecha colocación': x.fechaColocacion, 'Reemplazó a N°': x.nRetirado, 'Lote': x.lote, 'OC': x.oc, 'N° SRA (salida depósito)': x.nSra, 'Responsable': x.responsable, 'Fecha registro': x.fechaRegistro, 'Observaciones': x.observaciones
+    'N° NP': x.np, 'N° Transferencia': x.transferencia, 'Fecha entrega': x.fechaColocacion, 'Reemplazó a N°': x.nRetirado, 'Lote': x.lote, 'OC': x.oc, 'N° SRA (salida depósito)': x.nSra, 'Responsable': x.responsable, 'Fecha registro': x.fechaRegistro, 'Observaciones': x.observaciones
   })));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Pernos');
@@ -2630,6 +2632,8 @@ function setCamposExtraPerno(x) {
   document.getElementById('pernoSra').value = x.nSra || '';
   document.getElementById('pernoResponsable').value = x.responsable || '';
   document.getElementById('pernoFechaRegistro').value = isoDesdeDDMMYYYY(x.fechaRegistro || '');
+  document.getElementById('pernoNp').value = x.np || '';
+  document.getElementById('pernoCampoNp').style.display = x.fila ? 'block' : 'none'; // solo al editar
 }
 const extraPernoParams = (v) => ({ lote: v('pernoLote'), oc: v('pernoOc'), nSra: v('pernoSra'), responsable: v('pernoResponsable'), fechaRegistro: v('pernoFechaRegistro') });
 
@@ -2647,7 +2651,7 @@ async function guardarPerno() {
   try {
     if (pernoEnEdicion) {
       await apiGet({ action: 'actualizarPerno', fila: pernoEnEdicion.fila, material: v('pernoMaterial'), fechaCert: v('pernoFechaCert'),
-        nCertificado: v('pernoCertificado'), estado: v('pernoEstado'), unidad: v('pernoUnidad'), observaciones: v('pernoObservaciones'), ...extraPernoParams(v) });
+        nCertificado: v('pernoCertificado'), estado: v('pernoEstado'), unidad: v('pernoUnidad'), observaciones: v('pernoObservaciones'), np: v('pernoNp'), ...extraPernoParams(v) });
       mostrarToast('Elemento actualizado', 'ok');
     } else {
       await apiGet({ action: 'crearPerno', numero: v('pernoNumero'), tipo: v('pernoTipo'), material: v('pernoMaterial'),
