@@ -282,7 +282,7 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
   <div class="hleft">
     <span class="logo-badge">GRIFFOULIERE</span>
     <span class="htitle">Notas de Pedido</span>
-    <span class="hsub">Tablero de gestión · mostrando 2026 en adelante · <span title="Versión del tablero">v20.10.26-a</span></span>
+    <span class="hsub">Tablero de gestión · mostrando 2026 en adelante · <span title="Versión del tablero">v20.10.26-c</span></span>
   </div>
   <div class="user-bar">
     <span class="uname" id="userNombre">—</span>
@@ -2206,6 +2206,15 @@ async function cargarTablaTrazabilidad() {
   renderTrazabilidad();
 }
 
+// Para pernos/tuercas muestra el tipo real (la tuerca comparte categoría SUPERCHUPA con el perno)
+function nombreCategoriaRegistro(r) {
+  if (esCategoriaPerno(r.categoria)) {
+    const t = tipoPernoDesdeTexto(r.articulo, r.categoria);
+    return t.charAt(0) + t.slice(1).toLowerCase();
+  }
+  return NOMBRE_CATEGORIA_TRAZ[r.categoria] || r.categoria;
+}
+
 function renderTrazabilidad() {
   const cont = document.getElementById('trazabilidadContent');
   const filtroCategoria = document.getElementById('filTrazCategoria') ? document.getElementById('filTrazCategoria').value : '';
@@ -2218,8 +2227,9 @@ function renderTrazabilidad() {
 
   const filas = registros.map(r => `
     <tr>
-      <td class="nowrap"><span class="pill p-otro">${escapeHtml(NOMBRE_CATEGORIA_TRAZ[r.categoria] || r.categoria)}</span></td>
+      <td class="nowrap"><span class="pill p-otro">${escapeHtml(nombreCategoriaRegistro(r))}</span></td>
       <td class="nowrap">${escapeHtml(String(r.np))}</td>
+      <td class="nowrap">${escapeHtml(String(r.transferencia || '—'))}</td>
       <td class="nowrap" style="text-align:center">${escapeHtml(String(r.item || 1))}</td>
       <td style="white-space:normal;max-width:260px">${escapeHtml(r.articulo || '')}</td>
       <td class="nowrap">${escapeHtml(r.destino || '—')}</td>
@@ -2240,7 +2250,7 @@ function renderTrazabilidad() {
       <div class="twrap" style="display:block">
         <table>
           <thead><tr>
-            <th>Categoría</th><th>N° NP</th><th>Ítem</th><th>Artículo</th><th>Destino</th>
+            <th>Categoría</th><th>N° NP</th><th>N° Transferencia</th><th>Ítem</th><th>Artículo</th><th>Destino</th>
             <th>N° Entrega</th><th>N° Recambio</th><th>F. Entrega</th>
             <th>F. Venc. Recarga</th><th>F. Venc. Prueba</th><th>F. Certificación</th><th>N° Certificado</th><th>Resp. entrega</th><th>Usuario</th>
           </tr></thead>
@@ -2254,7 +2264,7 @@ function renderTrazabilidad() {
 function exportarTrazabilidadExcel() {
   if (!trazabilidadCache.length) { mostrarToast('No hay datos para exportar', 'err'); return; }
   const filas = trazabilidadCache.map(r => ({
-    'Categoría': NOMBRE_CATEGORIA_TRAZ[r.categoria] || r.categoria, 'N° NP': r.np, 'Ítem': r.item || 1, 'Artículo': r.articulo, 'Destino': r.destino,
+    'Categoría': nombreCategoriaRegistro(r), 'N° NP': r.np, 'N° Transferencia': r.transferencia, 'Ítem': r.item || 1, 'Artículo': r.articulo, 'Destino': r.destino,
     'N° Elemento Entrega': r.nElementoEntrega, 'N° Elemento Recambio': r.nElementoRecambio, 'Fecha Entrega': r.fechaEntrega,
     'Fecha Venc. Recarga': r.fechaVencRecarga, 'Fecha Venc. Prueba': r.fechaVencPrueba,
     'Fecha Certificación': r.fechaCertificacion, 'N° Certificado': r.nCertificado, 'Responsable de la entrega': r.responsableEntrega, 'Usuario': r.usuario, 'Fecha de carga': r.fechaCarga
@@ -2336,6 +2346,7 @@ function renderMatafuegos() {
       <td class="nowrap">${escapeHtml(m.vencPH || '—')}</td>
       <td class="nowrap">${pillEstadoMata('Carga', m.estadoCarga)}<div class="subline" style="margin-top:4px">${pillEstadoMata('PH', m.estadoPH)}</div></td>
       <td class="nowrap">${escapeHtml(m.patente || '—')}</td>
+      <td class="nowrap">${escapeHtml(String(m.transferencia || '—'))}</td>
       <td class="mata-obs">${escapeHtml(m.observaciones || '—')}</td>
       <td class="nowrap"><button class="btn-edit" onclick="abrirModalMatafuego(${m.fila})"><i class="ti ti-edit"></i> Editar</button></td>
     </tr>
@@ -2347,7 +2358,7 @@ function renderMatafuegos() {
         <table>
           <thead><tr>
             <th>N° Matafuego</th><th>Capacidad Kg</th><th>Tipo</th><th>Venc. Carga</th><th>Venc. PH</th>
-            <th>Estado (Carga / PH)</th><th>Patente</th><th>Observaciones</th><th></th>
+            <th>Estado (Carga / PH)</th><th>Patente</th><th>N° Transferencia</th><th>Observaciones</th><th></th>
           </tr></thead>
           <tbody>${filas}</tbody>
         </table>
@@ -2362,7 +2373,7 @@ function exportarMatafuegosExcel() {
   const filas = registros.map(m => ({
     'N° Matafuego': m.nMatafuego, 'Capacidad Kg': m.capacidadKg, 'Tipo': m.tipo,
     'Venc. Carga': m.vencCarga, 'Venc. PH': m.vencPH, 'Estado Carga': m.estadoCarga, 'Estado PH': m.estadoPH,
-    'Patente': m.patente, 'Observaciones': m.observaciones
+    'Patente': m.patente, 'N° Transferencia': m.transferencia, 'Observaciones': m.observaciones
   }));
   const ws = XLSX.utils.json_to_sheet(filas);
   const wb = XLSX.utils.book_new();
@@ -2532,6 +2543,7 @@ function renderPernos() {
       <td class="nowrap">${escapeHtml(x.fechaCert || '—')}</td>
       <td class="nowrap">${x.nCertificado ? escapeHtml(x.nCertificado) : '<span style="color:var(--red-text);font-weight:600">FALTA</span>'}</td>
       <td class="nowrap">${escapeHtml(String(x.np || '—'))}</td>
+      <td class="nowrap">${escapeHtml(String(x.transferencia || '—'))}</td>
       <td class="nowrap">${escapeHtml(x.fechaColocacion || '—')}</td>
       <td class="nowrap">${escapeHtml(x.nRetirado || '—')}</td>
       <td style="white-space:pre-line;max-width:240px">${escapeHtml(x.observaciones || '—')}</td>
@@ -2540,7 +2552,7 @@ function renderPernos() {
   cont.innerHTML = `
     <div class="tbl-card"><div class="twrap" style="display:block"><table>
       <thead><tr><th>N°</th><th>Tipo</th><th>Material</th><th>Estado</th><th>Unidad</th><th>F. cert./ensayo</th><th>N° certificado</th>
-        <th>N° NP</th><th>F. colocación</th><th>Reemplazó a</th><th>Observaciones</th><th></th></tr></thead>
+        <th>N° NP</th><th>N° Transferencia</th><th>F. colocación</th><th>Reemplazó a</th><th>Observaciones</th><th></th></tr></thead>
       <tbody>${filas}</tbody>
     </table></div></div>`;
 }
@@ -2551,7 +2563,7 @@ function exportarPernosExcel() {
   const ws = XLSX.utils.json_to_sheet(regs.map(x => ({
     'N° elemento': x.numero, 'Tipo': x.tipo, 'Material': x.material, 'Código': x.codigo, 'Artículo': x.articulo,
     'Estado': x.estado, 'Unidad': x.unidad, 'Fecha cert./ensayo': x.fechaCert, 'N° certificado': x.nCertificado,
-    'N° NP': x.np, 'Fecha colocación': x.fechaColocacion, 'Reemplazó a N°': x.nRetirado, 'Observaciones': x.observaciones
+    'N° NP': x.np, 'N° Transferencia': x.transferencia, 'Fecha colocación': x.fechaColocacion, 'Reemplazó a N°': x.nRetirado, 'Observaciones': x.observaciones
   })));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Pernos');
@@ -2694,6 +2706,7 @@ function renderManguerotes() {
       <td class="nowrap">${m.nCertificado ? escapeHtml(m.nCertificado) : '<span style="color:var(--red-text);font-weight:600">FALTA</span>'}</td>
       <td class="nowrap">${escapeHtml(m.destino || '—')}</td>
       <td class="nowrap">${escapeHtml(String(m.np || '—'))}</td>
+      <td class="nowrap">${escapeHtml(String(m.transferencia || '—'))}</td>
       <td class="nowrap">${escapeHtml(m.fechaEntrega || '—')}</td>
       <td class="nowrap">${escapeHtml(m.responsableEntrega || '—')}</td>
       <td class="nowrap">${escapeHtml(m.nViejo || '—')}</td>
@@ -2706,7 +2719,7 @@ function renderManguerotes() {
         <table>
           <thead><tr>
             <th>Numeración</th><th>Diám.</th><th>Estado</th><th>N° Certificado</th><th>Destino / unidad</th>
-            <th>N° NP</th><th>F. Entrega</th><th>Resp. entrega</th><th>N° viejo</th><th>Observaciones</th><th></th>
+            <th>N° NP</th><th>N° Transferencia</th><th>F. Entrega</th><th>Resp. entrega</th><th>N° viejo</th><th>Observaciones</th><th></th>
           </tr></thead>
           <tbody>${filas}</tbody>
         </table>
@@ -2719,7 +2732,7 @@ function exportarManguerotesExcel() {
   if (!registros.length) { mostrarToast('No hay datos para exportar', 'err'); return; }
   const filas = registros.map(m => ({
     'Código': m.codigo, 'Detalle': m.detalle, 'Numeración': m.numeracion, 'Diámetro': m.diametro, 'Estado': m.estado,
-    'N° Certificado': m.nCertificado, 'Destino / unidad': m.destino, 'N° NP entrega': m.np, 'Fecha entrega': m.fechaEntrega,
+    'N° Certificado': m.nCertificado, 'Destino / unidad': m.destino, 'N° NP entrega': m.np, 'N° Transferencia': m.transferencia, 'Fecha entrega': m.fechaEntrega,
     'Responsable de la entrega': m.responsableEntrega, 'N° manguerote viejo': m.nViejo, 'Observaciones': m.observaciones
   }));
   const ws = XLSX.utils.json_to_sheet(filas);
