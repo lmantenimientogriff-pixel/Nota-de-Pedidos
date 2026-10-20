@@ -282,7 +282,7 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
   <div class="hleft">
     <span class="logo-badge">GRIFFOULIERE</span>
     <span class="htitle">Notas de Pedido</span>
-    <span class="hsub">Tablero de gestión · mostrando 2026 en adelante</span>
+    <span class="hsub">Tablero de gestión · mostrando 2026 en adelante · <span title="Versión del tablero">v20.10.26-a</span></span>
   </div>
   <div class="user-bar">
     <span class="uname" id="userNombre">—</span>
@@ -368,6 +368,7 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
     <div class="tab" id="tab-btn-trazabilidad" onclick="goToTab('trazabilidad')"><i class="ti ti-shield-check"></i> Trazabilidad</div>
     <div class="tab" id="tab-btn-matafuegos" onclick="goToTab('matafuegos')"><i class="ti ti-fire-extinguisher"></i> Matafuegos</div>
     <div class="tab" id="tab-btn-manguerotes" onclick="goToTab('manguerotes')"><i class="ti ti-circle-dashed"></i> Manguerotes</div>
+    <div class="tab" id="tab-btn-pernos" onclick="goToTab('pernos')"><i class="ti ti-tool"></i> Pernos</div>
     <div class="tab" id="tab-btn-log" onclick="goToTab('log')" style="display:none"><i class="ti ti-history"></i> Log de cambios</div>
     <div class="tab" id="tab-btn-usuarios" onclick="goToTab('usuarios')" style="display:none"><i class="ti ti-users"></i> Usuarios</div>
   </div>
@@ -584,6 +585,35 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
     <div id="manguerotesContent"><div class="loading"><div class="spinner"></div>Cargando…</div></div>
   </div>
 
+  <!-- ===== TAB PERNOS (pernos y tuercas superchupa + pernos de enganche) ===== -->
+  <div class="tcontent" id="tab-pernos">
+    <div class="filters-bar" style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:10px">
+      <div class="fgrid" style="flex:1">
+        <div class="fi"><label>N° elemento</label><input type="text" id="filPernoNumero" oninput="renderPernos()" placeholder="Buscar N°..."></div>
+        <div class="fi"><label>Tipo</label>
+          <select id="filPernoTipo" onchange="renderPernos()">
+            <option value="">Todos</option><option>PERNO SUPERCHUPA</option><option>TUERCA SUPERCHUPA</option><option>PERNO ENGANCHE</option>
+          </select></div>
+        <div class="fi"><label>Material</label>
+          <select id="filPernoMaterial" onchange="renderPernos()">
+            <option value="">Todos</option><option>SAE 4140</option><option>INOX</option><option>OTRO</option><option value="__SIN">Sin informar</option>
+          </select></div>
+        <div class="fi"><label>Estado</label>
+          <select id="filPernoEstado" onchange="renderPernos()">
+            <option value="">Todos</option><option>COLOCADO</option><option>EN STOCK</option><option>RETIRADO</option><option>BAJA</option>
+          </select></div>
+        <div class="fi"><label>Unidad</label><input type="text" id="filPernoUnidad" oninput="renderPernos()" placeholder="Patente / interno..."></div>
+      </div>
+      <div class="ebtns">
+        <button onclick="exportarPernosExcel()"><i class="ti ti-file-spreadsheet"></i> Excel</button>
+        <button onclick="cargarTablaPernos()"><i class="ti ti-refresh"></i> Actualizar</button>
+        <button class="primary" onclick="abrirModalPernoNuevo()"><i class="ti ti-plus"></i> Nuevo elemento</button>
+      </div>
+    </div>
+    <div id="kpisPernos"></div>
+    <div id="pernosContent"><div class="loading"><div class="spinner"></div>Cargando…</div></div>
+  </div>
+
   <!-- ===== TAB LOG DE CAMBIOS (solo ADMINISTRADOR / PROPIETARIO) ===== -->
   <div class="tcontent" id="tab-log">
     <div class="tbl-card">
@@ -685,6 +715,7 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
 
       <div id="trazUnidades"></div>
       <datalist id="lstManguerotesStock"></datalist>
+      <datalist id="lstPernosStock"></datalist>
       <datalist id="lstTiposMatafuego"></datalist>
     </div>
 
@@ -791,6 +822,38 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
   </div>
 </div>
 
+<!-- MODAL DE PERNO (alta manual / edición) -->
+<div class="modal-overlay" id="pernoModalOverlay">
+  <div class="modal">
+    <div class="modal-title" id="pernoModalTitulo"><i class="ti ti-tool"></i> Editar elemento</div>
+    <div class="modal-sub" id="pernoModalSub">—</div>
+    <div class="row2">
+      <div class="field"><label>N° de elemento</label><input type="text" id="pernoNumero"></div>
+      <div class="field"><label>Tipo</label>
+        <select id="pernoTipo"><option>PERNO SUPERCHUPA</option><option>TUERCA SUPERCHUPA</option><option>PERNO ENGANCHE</option></select></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Material</label>
+        <select id="pernoMaterial"><option value="">Sin informar</option><option>SAE 4140</option><option>INOX</option><option>OTRO</option></select></div>
+      <div class="field"><label>Fecha de certificación / ensayo</label><input type="date" id="pernoFechaCert"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>N° de certificado</label><input type="text" id="pernoCertificado"></div>
+      <div class="field" id="pernoCampoEstado"><label>Estado</label>
+        <select id="pernoEstado"><option>COLOCADO</option><option>EN STOCK</option><option>RETIRADO</option><option>BAJA</option></select></div>
+    </div>
+    <div class="row2" id="pernoFilaUnidad">
+      <div class="field"><label>Unidad (patente / interno)</label><input type="text" id="pernoUnidad">
+        <div class="hint">Solo se guarda si el estado es COLOCADO</div></div>
+    </div>
+    <div class="field"><label>Observaciones</label><textarea id="pernoObservaciones"></textarea></div>
+    <div class="modal-actions">
+      <button onclick="cerrarModalPerno()">Cancelar</button>
+      <button class="primary" id="btnGuardarPerno" onclick="guardarPerno()"><i class="ti ti-device-floppy"></i> Guardar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL DE MANGUEROTE (alta manual / edición) -->
 <div class="modal-overlay" id="mangModalOverlay">
   <div class="modal">
@@ -858,6 +921,8 @@ let filaEnEdicion = null;
 let usuarioEnEdicion = null;
 let matafuegoEnEdicion = null;
 let manguerotesCache = [];
+let pernosCache = [];
+let pernoEnEdicion = null;
 let mangueroteEnEdicion = null; // null = alta nueva
 let modoModalMatafuego = 'editar'; // 'editar' | 'nuevo'
 let vistaActual = 'articulos';
@@ -955,6 +1020,7 @@ function mostrarApp() {
   cargarTrazabilidad();
   cargarMatafuegos();
   cargarManguerotes();
+  cargarPernos();
   cargarPedidos();
 }
 
@@ -985,6 +1051,7 @@ function goToTab(id) {
   if (id === 'trazabilidad') cargarTablaTrazabilidad();
   if (id === 'matafuegos') cargarTablaMatafuegos();
   if (id === 'manguerotes') cargarTablaManguerotes();
+  if (id === 'pernos') cargarTablaPernos();
   if (id === 'log') cargarLog();
   if (id === 'usuarios') cargarUsuarios();
 }
@@ -1750,8 +1817,8 @@ const MAX_UNIDADES_TRAZ = 30;
 const CAMPOS_UNIDAD_TRAZ = {
   MATAFUEGO:      ['entrega', 'recambio', 'patente', 'vencRecarga', 'vencPrueba'],
   IZAJE:          ['entrega', 'fechaCert', 'nCert'],
-  ENGANCHE:       ['entrega', 'fechaCert', 'nCert'],
-  SUPERCHUPA:     ['entrega', 'fechaCert', 'nCert'],
+  ENGANCHE:       ['entrega', 'recambio', 'patente', 'fechaCert', 'nCert'],
+  SUPERCHUPA:     ['entrega', 'recambio', 'patente', 'fechaCert', 'nCert'],
   MANOVACUOMETRO: ['entrega', 'fechaCert'],
   VALVULA_PSV:    ['entrega', 'fechaCert'],
   MANGUEROTE:     ['entrega', 'recambio', 'nCert']
@@ -1759,8 +1826,9 @@ const CAMPOS_UNIDAD_TRAZ = {
 function labelCampoTraz(cat, campo) {
   const L = {
     entrega: { MATAFUEGO: 'N° de matafuego que entrega', MANGUEROTE: 'N° de manguerote que se entrega', _: 'N° de elemento' },
-    recambio: { MATAFUEGO: 'N° de matafuego que recambia', MANGUEROTE: 'N° de manguerote viejo (NA si no hay)', _: 'N° que recambia' },
-    patente: { _: 'Patente de la unidad que lo recibe' },
+    recambio: { MATAFUEGO: 'N° de matafuego que recambia', MANGUEROTE: 'N° de manguerote viejo (NA si no hay)',
+      SUPERCHUPA: 'N° del elemento retirado (NA si no hay)', ENGANCHE: 'N° del perno retirado (NA si no hay)', _: 'N° que recambia' },
+    patente: { SUPERCHUPA: 'Unidad que lo recibe (patente / interno)', ENGANCHE: 'Unidad que lo recibe (patente / interno)', _: 'Patente de la unidad que lo recibe' },
     vencRecarga: { _: 'Fecha vencimiento recarga' },
     vencPrueba: { _: 'Fecha vencimiento prueba' },
     fechaCert: { SUPERCHUPA: 'Fecha de certificación/ensayo', _: 'Fecha de certificación' },
@@ -1788,6 +1856,17 @@ function buscarMangueroteCache(numero) {
   const n = normalizarNumero(numero);
   return n ? manguerotesCache.find(m => normalizarNumero(m.numeracion) === n) : null;
 }
+const esCategoriaPerno = (cat) => cat === 'SUPERCHUPA' || cat === 'ENGANCHE';
+function tipoPernoDesdeTexto(articulo, cat) {
+  const t = String(articulo || '').toUpperCase();
+  if (cat === 'ENGANCHE') return 'PERNO ENGANCHE';
+  if (t.includes('TUERCA') || t.includes('0302701324')) return 'TUERCA SUPERCHUPA';
+  return 'PERNO SUPERCHUPA';
+}
+function buscarPernoCache(tipo, numero) {
+  const n = normalizarNumero(numero);
+  return n ? pernosCache.find(x => x.tipo === tipo && normalizarNumero(x.numero) === n) : null;
+}
 function buscarMatafuegoCache(numero) {
   const n = normalizarNumero(numero);
   return n ? matafuegosCache.find(m => normalizarNumero(m.nMatafuego) === n) : null;
@@ -1802,7 +1881,9 @@ function cantidadUnidadesTraz(p) {
 
 function htmlCampoUnidad(cat, campo, i) {
   const tipo = TIPO_CAMPO_TRAZ[campo] || 'text';
-  const lista = (campo === 'entrega' && cat === 'MANGUEROTE') ? ' list="lstManguerotesStock" autocomplete="off"' : '';
+  const lista = campo !== 'entrega' ? '' :
+    cat === 'MANGUEROTE' ? ' list="lstManguerotesStock" autocomplete="off"' :
+    esCategoriaPerno(cat) ? ' list="lstPernosStock" autocomplete="off"' : '';
   const info = (campo === 'entrega' || campo === 'recambio') ? `<div class="hint" id="${idU(campo + 'Info', i)}"></div>` : '';
   return `<div class="field"><label>${escapeHtml(labelCampoTraz(cat, campo))}</label>
     <input type="${tipo}" id="${idU(campo, i)}"${lista} data-u="${i}" data-campo="${campo}">${info}</div>`;
@@ -1849,7 +1930,8 @@ function armarUnidadesTraz(p, cat) {
   unidadesTrazN = n;
 
   document.getElementById('trazTitulo').innerHTML = '<i class="ti ti-shield-check"></i> Trazabilidad — ' +
-    escapeHtml(NOMBRE_CATEGORIA_TRAZ[cat] || cat) + ' · ' + n + (n === 1 ? ' artículo' : ' artículos');
+    escapeHtml(esCategoriaPerno(cat) ? tipoPernoDesdeTexto(p.articulo, cat).charAt(0) + tipoPernoDesdeTexto(p.articulo, cat).slice(1).toLowerCase()
+      : (NOMBRE_CATEGORIA_TRAZ[cat] || cat)) + ' · ' + n + (n === 1 ? ' artículo' : ' artículos');
   const aviso = document.getElementById('trazAvisoCantidad');
   if (cant.recortada || cant.invalida) {
     aviso.style.display = 'block';
@@ -1885,6 +1967,12 @@ function armarUnidadesTraz(p, cat) {
   document.getElementById('tResponsableEntrega').value = respGuardado ? respGuardado.responsableEntrega : (currentUser ? currentUser.nombre : '');
 
   if (cat === 'MANGUEROTE') poblarSugerenciasManguerote(p);
+  if (esCategoriaPerno(cat)) {
+    const tipo = tipoPernoDesdeTexto(p.articulo, cat);
+    document.getElementById('lstPernosStock').innerHTML = pernosCache
+      .filter(x => x.tipo === tipo && x.estado === 'EN STOCK')
+      .map(x => `<option value="${escapeHtml(x.numero)}">${escapeHtml(x.material || '')} · Cert. ${escapeHtml(x.nCertificado || 's/d')}</option>`).join('');
+  }
   verificarTodasLasUnidades();
 }
 
@@ -1939,12 +2027,21 @@ function evaluarUnidades() {
     } else if (nEnt && cat === 'MATAFUEGO') {
       out.mataReg = buscarMatafuegoCache(ent);
       out.mataNuevo = !out.mataReg;
+    } else if (nEnt && esCategoriaPerno(cat)) {
+      const tipo = tipoPernoDesdeTexto(filaEnEdicion.articulo, cat);
+      const pr = buscarPernoCache(tipo, ent);
+      if (!pr) { out.nivelEntrega = 'warn'; out.txtEntrega = 'No está en el registro: se da de alta como ' + tipo + ' nuevo.'; }
+      else if (pr.estado === 'BAJA') { out.nivelEntrega = 'error'; out.txtEntrega = 'Este elemento está dado de BAJA.'; }
+      else if (pr.estado === 'COLOCADO' && Number(pr.filaNota) !== Number(filaEnEdicion.fila)) {
+        out.nivelEntrega = 'error'; out.txtEntrega = 'Ya figura COLOCADO en ' + (pr.unidad || 's/d') + ' (NP ' + (pr.np || 's/d') + '). Si se retiró, corregí su estado en la pestaña Pernos.';
+      } else { out.txtEntrega = 'Registrado: ' + (pr.material || 's/material') + ', ' + pr.estado + ', cert. ' + (pr.nCertificado || 's/d') + '.'; }
     }
 
     // --- N° que se retira / recambia
-    if (cat === 'MATAFUEGO' || cat === 'MANGUEROTE') {
+    if (cat === 'MATAFUEGO' || cat === 'MANGUEROTE' || esCategoriaPerno(cat)) {
       if (!rec) {
-        out.txtRecambio = cat === 'MANGUEROTE' ? 'Si no se retira ningún manguerote, escribí NA' : '';
+        out.txtRecambio = cat === 'MANGUEROTE' ? 'Si no se retira ningún manguerote, escribí NA'
+          : esCategoriaPerno(cat) ? 'Si no se retira ninguno (o el retirado no tenía N°), escribí NA' : '';
       } else if (nRec === 'NA') {
         out.txtRecambio = 'Sin recambio';
       } else if (nRec === nEnt) {
@@ -1952,11 +2049,13 @@ function evaluarUnidades() {
       } else if (cuentaRec[nRec] > 1) {
         out.nivelRecambio = 'error'; out.txtRecambio = 'Este N° viejo está repetido en otro artículo.';
       } else {
-        const reg = cat === 'MATAFUEGO' ? buscarMatafuegoCache(rec) : buscarMangueroteCache(rec);
+        const reg = cat === 'MATAFUEGO' ? buscarMatafuegoCache(rec)
+          : cat === 'MANGUEROTE' ? buscarMangueroteCache(rec)
+          : buscarPernoCache(tipoPernoDesdeTexto(filaEnEdicion.articulo, cat), rec);
         if (reg) {
           out.txtRecambio = cat === 'MATAFUEGO'
             ? 'Registrado (patente actual: ' + (reg.patente || 'sin asignar') + '). Al guardar queda desasignado y retirado.'
-            : 'Registrado (' + (reg.destino || 'sin destino') + '). Al guardar queda RETIRADO.';
+            : 'Registrado (' + (reg.destino || reg.unidad || 'sin unidad') + '). Al guardar queda RETIRADO.';
         } else {
           out.nivelRecambio = 'warn'; out.txtRecambio = 'No está en el registro: queda en Trazabilidad, pero no se actualiza el maestro.';
         }
@@ -1991,6 +2090,13 @@ function verificarTodasLasUnidades() {
       reg.style.display = ev.mataReg ? 'flex' : 'none';
       if (ev.mataReg) reg.innerHTML = `<i class="ti ti-circle-check"></i> Matafuego ya registrado: ${escapeHtml(ev.mataReg.capacidadKg || '—')} Kg, Tipo ${escapeHtml(ev.mataReg.tipo || '—')}`;
       nuevo.style.display = ev.mataNuevo ? 'block' : 'none';
+    }
+    // Perno registrado: completa certificado y fecha de ensayo si están vacíos
+    if (filaEnEdicion && esCategoriaPerno(filaEnEdicion.categoriaTrazabilidad)) {
+      const pr = buscarPernoCache(tipoPernoDesdeTexto(filaEnEdicion.articulo, filaEnEdicion.categoriaTrazabilidad), valU('entrega', i));
+      const cert = document.getElementById(idU('nCert', i)), fec = document.getElementById(idU('fechaCert', i));
+      if (pr && pr.nCertificado && cert && !cert.value.trim()) cert.value = pr.nCertificado;
+      if (pr && pr.fechaCert && fec && !fec.value) fec.value = isoDesdeDDMMYYYY(pr.fechaCert);
     }
     // Manguerote registrado: completa el certificado si está vacío
     if (filaEnEdicion && filaEnEdicion.categoriaTrazabilidad === 'MANGUEROTE') {
@@ -2084,6 +2190,7 @@ async function guardarTrazabilidadSiCorresponde(p, comunes, unidades) {
     cargarTrazabilidad();
     if (cat === 'MATAFUEGO') cargarMatafuegos();
     if (cat === 'MANGUEROTE') cargarManguerotes();
+    if (esCategoriaPerno(cat)) cargarPernos();
   } catch (err) {
     mostrarToast('El pedido se guardó, pero la trazabilidad no: ' + err.message, 'err');
   }
@@ -2346,6 +2453,178 @@ async function guardarMatafuego() {
 
 document.getElementById('mataModalOverlay').addEventListener('click', (ev) => {
   if (ev.target.id === 'mataModalOverlay') cerrarModalMatafuego();
+});
+
+/*******************************************************
+ * TAB PERNOS
+ *******************************************************/
+const ESTILO_ESTADO_PERNO = { 'COLOCADO': 'p-cumplido', 'EN STOCK': 'p-pendiente', 'RETIRADO': 'p-proceso', 'BAJA': 'p-rechazado' };
+
+async function cargarPernos() {
+  try {
+    const data = await apiGet({ action: 'getPernos' });
+    pernosCache = data.pernos || [];
+  } catch (err) {
+    console.error('No se pudo cargar el registro de pernos:', err); // ej: todavía no se corrió setupPernos()
+  }
+}
+async function cargarTablaPernos() {
+  document.getElementById('pernosContent').innerHTML = '<div class="loading"><div class="spinner"></div>Cargando…</div>';
+  await cargarPernos();
+  renderPernos();
+}
+
+function pernosFiltrados() {
+  const numero = normalizarNumero(document.getElementById('filPernoNumero').value);
+  const tipo = document.getElementById('filPernoTipo').value;
+  const material = document.getElementById('filPernoMaterial').value;
+  const estado = document.getElementById('filPernoEstado').value;
+  const unidad = document.getElementById('filPernoUnidad').value.trim().toLowerCase();
+  return pernosCache.filter(x => {
+    if (numero && !normalizarNumero(x.numero).includes(numero)) return false;
+    if (tipo && x.tipo !== tipo) return false;
+    if (material === '__SIN' ? !!x.material : (material && x.material !== material)) return false;
+    if (estado && x.estado !== estado) return false;
+    if (unidad && !String(x.unidad || '').toLowerCase().includes(unidad)) return false;
+    return true;
+  });
+}
+
+function renderPernos() {
+  const regs = pernosFiltrados();
+  const c = fn => regs.filter(fn).length;
+  const colocados = x => x.estado === 'COLOCADO';
+  const inoxColocados = c(x => colocados(x) && x.material === 'INOX');
+  const sinCert = c(x => colocados(x) && !x.nCertificado);
+  const sinMaterial = c(x => colocados(x) && !x.material);
+  const unidades = new Set(regs.filter(colocados).map(x => x.unidad).filter(Boolean)).size;
+  const kpi = (lbl, val, clase) => `<div class="kpi ${clase || ''}"><div class="lbl">${escapeHtml(lbl)}</div><div class="val">${val}</div></div>`;
+  document.getElementById('kpisPernos').innerHTML = `
+    <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
+      ${kpi('Total (con filtros)', regs.length)}
+      ${kpi('Colocados', c(colocados), 'ok')}
+      ${kpi('En stock', c(x => x.estado === 'EN STOCK'))}
+      ${kpi('Unidades con elementos', unidades)}
+    </div>
+    <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
+      ${kpi('Colocados SAE 4140', c(x => colocados(x) && x.material === 'SAE 4140'), 'ok')}
+      ${kpi('Colocados INOX', inoxColocados, inoxColocados ? 'danger' : 'ok')}
+      ${kpi('Colocados sin certificado', sinCert, sinCert ? 'danger' : 'ok')}
+      ${kpi('Colocados sin material', sinMaterial, sinMaterial ? 'warn' : 'ok')}
+    </div>`;
+
+  const cont = document.getElementById('pernosContent');
+  if (!regs.length) {
+    cont.innerHTML = '<div class="tbl-card"><div class="empty">No hay elementos que coincidan con los filtros' +
+      (pernosCache.length ? '' : ' — si la hoja "Pernos" todavía no existe, ejecutá setupPernos() en Apps Script') + '</div></div>';
+    return;
+  }
+  const orden = { 'COLOCADO': 0, 'EN STOCK': 1, 'RETIRADO': 2, 'BAJA': 3 };
+  const filas = regs.slice().sort((a, b) => String(a.unidad).localeCompare(String(b.unidad)) || (orden[a.estado] - orden[b.estado]) ||
+      a.tipo.localeCompare(b.tipo) || normalizarNumero(a.numero).localeCompare(normalizarNumero(b.numero), 'es', { numeric: true }))
+    .map(x => `
+    <tr>
+      <td class="nowrap"><strong>${escapeHtml(x.numero)}</strong></td>
+      <td class="nowrap">${escapeHtml(x.tipo)}</td>
+      <td class="nowrap">${x.material === 'INOX' ? '<span style="color:var(--red-text);font-weight:700">INOX</span>' : escapeHtml(x.material || '—')}</td>
+      <td class="nowrap"><span class="pill ${ESTILO_ESTADO_PERNO[x.estado] || 'p-otro'}">${escapeHtml(x.estado)}</span></td>
+      <td class="nowrap">${escapeHtml(x.unidad || '—')}</td>
+      <td class="nowrap">${escapeHtml(x.fechaCert || '—')}</td>
+      <td class="nowrap">${x.nCertificado ? escapeHtml(x.nCertificado) : '<span style="color:var(--red-text);font-weight:600">FALTA</span>'}</td>
+      <td class="nowrap">${escapeHtml(String(x.np || '—'))}</td>
+      <td class="nowrap">${escapeHtml(x.fechaColocacion || '—')}</td>
+      <td class="nowrap">${escapeHtml(x.nRetirado || '—')}</td>
+      <td style="white-space:pre-line;max-width:240px">${escapeHtml(x.observaciones || '—')}</td>
+      <td class="nowrap"><button class="btn-edit" onclick="abrirModalPerno(${x.fila})"><i class="ti ti-edit"></i> Editar</button></td>
+    </tr>`).join('');
+  cont.innerHTML = `
+    <div class="tbl-card"><div class="twrap" style="display:block"><table>
+      <thead><tr><th>N°</th><th>Tipo</th><th>Material</th><th>Estado</th><th>Unidad</th><th>F. cert./ensayo</th><th>N° certificado</th>
+        <th>N° NP</th><th>F. colocación</th><th>Reemplazó a</th><th>Observaciones</th><th></th></tr></thead>
+      <tbody>${filas}</tbody>
+    </table></div></div>`;
+}
+
+function exportarPernosExcel() {
+  const regs = pernosFiltrados();
+  if (!regs.length) { mostrarToast('No hay datos para exportar', 'err'); return; }
+  const ws = XLSX.utils.json_to_sheet(regs.map(x => ({
+    'N° elemento': x.numero, 'Tipo': x.tipo, 'Material': x.material, 'Código': x.codigo, 'Artículo': x.articulo,
+    'Estado': x.estado, 'Unidad': x.unidad, 'Fecha cert./ensayo': x.fechaCert, 'N° certificado': x.nCertificado,
+    'N° NP': x.np, 'Fecha colocación': x.fechaColocacion, 'Reemplazó a N°': x.nRetirado, 'Observaciones': x.observaciones
+  })));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Pernos');
+  XLSX.writeFile(wb, 'pernos_' + new Date().toISOString().slice(0, 10) + '.xlsx');
+}
+
+function abrirModalPerno(fila) {
+  const x = pernosCache.find(p => p.fila === fila);
+  if (!x) return;
+  pernoEnEdicion = x;
+  document.getElementById('pernoModalTitulo').innerHTML = '<i class="ti ti-tool"></i> Editar elemento';
+  document.getElementById('pernoModalSub').textContent = (x.articulo || x.tipo) + (x.np ? ' · NP ' + x.np : '');
+  const num = document.getElementById('pernoNumero'); num.value = x.numero; num.disabled = true;
+  const tipo = document.getElementById('pernoTipo'); tipo.value = x.tipo; tipo.disabled = true;
+  document.getElementById('pernoMaterial').value = x.material || '';
+  document.getElementById('pernoFechaCert').value = isoDesdeDDMMYYYY(x.fechaCert);
+  document.getElementById('pernoCertificado').value = x.nCertificado || '';
+  document.getElementById('pernoEstado').value = x.estado;
+  document.getElementById('pernoCampoEstado').style.display = 'block';
+  document.getElementById('pernoFilaUnidad').style.display = 'grid';
+  document.getElementById('pernoUnidad').value = x.unidad || '';
+  document.getElementById('pernoObservaciones').value = x.observaciones || '';
+  document.getElementById('pernoModalOverlay').classList.add('open');
+}
+
+function abrirModalPernoNuevo() {
+  pernoEnEdicion = null;
+  document.getElementById('pernoModalTitulo').innerHTML = '<i class="ti ti-tool"></i> Nuevo elemento';
+  document.getElementById('pernoModalSub').textContent = 'Queda EN STOCK hasta que se entregue con una nota de pedido';
+  const num = document.getElementById('pernoNumero'); num.value = ''; num.disabled = false;
+  const tipo = document.getElementById('pernoTipo'); tipo.value = 'PERNO SUPERCHUPA'; tipo.disabled = false;
+  document.getElementById('pernoMaterial').value = 'SAE 4140';
+  document.getElementById('pernoFechaCert').value = '';
+  document.getElementById('pernoCertificado').value = '';
+  document.getElementById('pernoCampoEstado').style.display = 'none';
+  document.getElementById('pernoFilaUnidad').style.display = 'none';
+  document.getElementById('pernoObservaciones').value = '';
+  document.getElementById('pernoModalOverlay').classList.add('open');
+}
+
+function cerrarModalPerno() {
+  document.getElementById('pernoModalOverlay').classList.remove('open');
+  pernoEnEdicion = null;
+}
+
+async function guardarPerno() {
+  const v = id => document.getElementById(id).value.trim();
+  if (!pernoEnEdicion && !v('pernoNumero')) { mostrarToast('Ingresá el N° de elemento', 'err'); return; }
+  if (pernoEnEdicion && v('pernoEstado') === 'COLOCADO' && !v('pernoUnidad')) { mostrarToast('Para dejarlo COLOCADO indicá la unidad', 'err'); return; }
+  const btn = document.getElementById('btnGuardarPerno');
+  btn.disabled = true; btn.textContent = 'Guardando…';
+  try {
+    if (pernoEnEdicion) {
+      await apiGet({ action: 'actualizarPerno', fila: pernoEnEdicion.fila, material: v('pernoMaterial'), fechaCert: v('pernoFechaCert'),
+        nCertificado: v('pernoCertificado'), estado: v('pernoEstado'), unidad: v('pernoUnidad'), observaciones: v('pernoObservaciones') });
+      mostrarToast('Elemento actualizado', 'ok');
+    } else {
+      await apiGet({ action: 'crearPerno', numero: v('pernoNumero'), tipo: v('pernoTipo'), material: v('pernoMaterial'),
+        fechaCert: v('pernoFechaCert'), nCertificado: v('pernoCertificado'), observaciones: v('pernoObservaciones') });
+      mostrarToast('Elemento creado', 'ok');
+    }
+    cerrarModalPerno();
+    await cargarPernos();
+    renderPernos();
+  } catch (err) {
+    mostrarToast('Error al guardar: ' + err.message, 'err');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ti ti-device-floppy"></i> Guardar';
+  }
+}
+document.getElementById('pernoModalOverlay').addEventListener('click', (ev) => {
+  if (ev.target.id === 'pernoModalOverlay') cerrarModalPerno();
 });
 
 /*******************************************************
