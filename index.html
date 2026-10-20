@@ -282,7 +282,7 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
   <div class="hleft">
     <span class="logo-badge">GRIFFOULIERE</span>
     <span class="htitle">Notas de Pedido</span>
-    <span class="hsub">Tablero de gestión · mostrando 2026 en adelante · <span title="Versión del tablero">v20.10.26-c</span></span>
+    <span class="hsub">Tablero de gestión · mostrando 2026 en adelante · <span title="Versión del tablero">v20.10.26-d</span></span>
   </div>
   <div class="user-bar">
     <span class="uname" id="userNombre">—</span>
@@ -603,6 +603,7 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
             <option value="">Todos</option><option>COLOCADO</option><option>EN STOCK</option><option>RETIRADO</option><option>BAJA</option>
           </select></div>
         <div class="fi"><label>Unidad</label><input type="text" id="filPernoUnidad" oninput="renderPernos()" placeholder="Patente / interno..."></div>
+        <div class="fi"><label>Lote</label><input type="text" id="filPernoLote" oninput="renderPernos()" placeholder="Ej: A042026"></div>
       </div>
       <div class="ebtns">
         <button onclick="exportarPernosExcel()"><i class="ti ti-file-spreadsheet"></i> Excel</button>
@@ -845,6 +846,17 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
     <div class="row2" id="pernoFilaUnidad">
       <div class="field"><label>Unidad (patente / interno)</label><input type="text" id="pernoUnidad">
         <div class="hint">Solo se guarda si el estado es COLOCADO</div></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Lote</label><input type="text" id="pernoLote"></div>
+      <div class="field"><label>OC</label><input type="text" id="pernoOc"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>N° SRA (salida depósito)</label><input type="text" id="pernoSra"></div>
+      <div class="field"><label>Responsable</label><input type="text" id="pernoResponsable"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Fecha registro</label><input type="date" id="pernoFechaRegistro"></div>
     </div>
     <div class="field"><label>Observaciones</label><textarea id="pernoObservaciones"></textarea></div>
     <div class="modal-actions">
@@ -2491,7 +2503,9 @@ function pernosFiltrados() {
   const material = document.getElementById('filPernoMaterial').value;
   const estado = document.getElementById('filPernoEstado').value;
   const unidad = document.getElementById('filPernoUnidad').value.trim().toLowerCase();
+  const lote = document.getElementById('filPernoLote').value.trim().toLowerCase();
   return pernosCache.filter(x => {
+    if (lote && !String(x.lote || '').toLowerCase().includes(lote)) return false;
     if (numero && !normalizarNumero(x.numero).includes(numero)) return false;
     if (tipo && x.tipo !== tipo) return false;
     if (material === '__SIN' ? !!x.material : (material && x.material !== material)) return false;
@@ -2546,13 +2560,17 @@ function renderPernos() {
       <td class="nowrap">${escapeHtml(String(x.transferencia || '—'))}</td>
       <td class="nowrap">${escapeHtml(x.fechaColocacion || '—')}</td>
       <td class="nowrap">${escapeHtml(x.nRetirado || '—')}</td>
+      <td class="nowrap">${escapeHtml(x.lote || '—')}</td>
+      <td class="nowrap">${escapeHtml(x.oc || '—')}</td>
+      <td class="nowrap">${escapeHtml(x.nSra || '—')}</td>
+      <td class="nowrap">${escapeHtml(x.responsable || '—')}</td>
       <td style="white-space:pre-line;max-width:240px">${escapeHtml(x.observaciones || '—')}</td>
       <td class="nowrap"><button class="btn-edit" onclick="abrirModalPerno(${x.fila})"><i class="ti ti-edit"></i> Editar</button></td>
     </tr>`).join('');
   cont.innerHTML = `
     <div class="tbl-card"><div class="twrap" style="display:block"><table>
       <thead><tr><th>N°</th><th>Tipo</th><th>Material</th><th>Estado</th><th>Unidad</th><th>F. cert./ensayo</th><th>N° certificado</th>
-        <th>N° NP</th><th>N° Transferencia</th><th>F. colocación</th><th>Reemplazó a</th><th>Observaciones</th><th></th></tr></thead>
+        <th>N° NP</th><th>N° Transferencia</th><th>F. colocación</th><th>Reemplazó a</th><th>Lote</th><th>OC</th><th>N° SRA</th><th>Responsable</th><th>Observaciones</th><th></th></tr></thead>
       <tbody>${filas}</tbody>
     </table></div></div>`;
 }
@@ -2563,7 +2581,7 @@ function exportarPernosExcel() {
   const ws = XLSX.utils.json_to_sheet(regs.map(x => ({
     'N° elemento': x.numero, 'Tipo': x.tipo, 'Material': x.material, 'Código': x.codigo, 'Artículo': x.articulo,
     'Estado': x.estado, 'Unidad': x.unidad, 'Fecha cert./ensayo': x.fechaCert, 'N° certificado': x.nCertificado,
-    'N° NP': x.np, 'N° Transferencia': x.transferencia, 'Fecha colocación': x.fechaColocacion, 'Reemplazó a N°': x.nRetirado, 'Observaciones': x.observaciones
+    'N° NP': x.np, 'N° Transferencia': x.transferencia, 'Fecha colocación': x.fechaColocacion, 'Reemplazó a N°': x.nRetirado, 'Lote': x.lote, 'OC': x.oc, 'N° SRA (salida depósito)': x.nSra, 'Responsable': x.responsable, 'Fecha registro': x.fechaRegistro, 'Observaciones': x.observaciones
   })));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Pernos');
@@ -2586,6 +2604,7 @@ function abrirModalPerno(fila) {
   document.getElementById('pernoFilaUnidad').style.display = 'grid';
   document.getElementById('pernoUnidad').value = x.unidad || '';
   document.getElementById('pernoObservaciones').value = x.observaciones || '';
+  setCamposExtraPerno(x);
   document.getElementById('pernoModalOverlay').classList.add('open');
 }
 
@@ -2601,8 +2620,18 @@ function abrirModalPernoNuevo() {
   document.getElementById('pernoCampoEstado').style.display = 'none';
   document.getElementById('pernoFilaUnidad').style.display = 'none';
   document.getElementById('pernoObservaciones').value = '';
+  setCamposExtraPerno({});
   document.getElementById('pernoModalOverlay').classList.add('open');
 }
+
+function setCamposExtraPerno(x) {
+  document.getElementById('pernoLote').value = x.lote || '';
+  document.getElementById('pernoOc').value = x.oc || '';
+  document.getElementById('pernoSra').value = x.nSra || '';
+  document.getElementById('pernoResponsable').value = x.responsable || '';
+  document.getElementById('pernoFechaRegistro').value = isoDesdeDDMMYYYY(x.fechaRegistro || '');
+}
+const extraPernoParams = (v) => ({ lote: v('pernoLote'), oc: v('pernoOc'), nSra: v('pernoSra'), responsable: v('pernoResponsable'), fechaRegistro: v('pernoFechaRegistro') });
 
 function cerrarModalPerno() {
   document.getElementById('pernoModalOverlay').classList.remove('open');
@@ -2618,11 +2647,11 @@ async function guardarPerno() {
   try {
     if (pernoEnEdicion) {
       await apiGet({ action: 'actualizarPerno', fila: pernoEnEdicion.fila, material: v('pernoMaterial'), fechaCert: v('pernoFechaCert'),
-        nCertificado: v('pernoCertificado'), estado: v('pernoEstado'), unidad: v('pernoUnidad'), observaciones: v('pernoObservaciones') });
+        nCertificado: v('pernoCertificado'), estado: v('pernoEstado'), unidad: v('pernoUnidad'), observaciones: v('pernoObservaciones'), ...extraPernoParams(v) });
       mostrarToast('Elemento actualizado', 'ok');
     } else {
       await apiGet({ action: 'crearPerno', numero: v('pernoNumero'), tipo: v('pernoTipo'), material: v('pernoMaterial'),
-        fechaCert: v('pernoFechaCert'), nCertificado: v('pernoCertificado'), observaciones: v('pernoObservaciones') });
+        fechaCert: v('pernoFechaCert'), nCertificado: v('pernoCertificado'), observaciones: v('pernoObservaciones'), ...extraPernoParams(v) });
       mostrarToast('Elemento creado', 'ok');
     }
     cerrarModalPerno();
