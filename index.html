@@ -47,6 +47,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14
 .logo-badge{font-size:11px;font-weight:700;letter-spacing:3px;color:#fff;background:var(--rojo);padding:3px 9px;border-radius:2px;white-space:nowrap}
 .htitle{color:#fff;font-size:15px;font-weight:600;white-space:nowrap}
 .hsub{color:#999;font-size:11px}
+@media(max-width:700px){
+  .hsub,.htitle{display:none}
+  .user-bar{gap:6px;font-size:12px}
+  .user-bar .uname{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+}
 .user-bar{display:flex;align-items:center;gap:10px;color:#ccc;font-size:13px}
 .user-bar .uname{font-weight:600;color:#fff}
 .urole{font-size:9px;font-weight:700;letter-spacing:.6px;padding:2px 8px;border-radius:10px}
@@ -282,7 +287,7 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
   <div class="hleft">
     <span class="logo-badge">GRIFFOULIERE</span>
     <span class="htitle">Notas de Pedido</span>
-    <span class="hsub">Tablero de gestión · mostrando 2026 en adelante · <span title="Versión del tablero">v20.10.26-f</span></span>
+    <span class="hsub">Tablero de gestión · mostrando 2026 en adelante · <span title="Versión del tablero">v20.10.26-h</span></span>
   </div>
   <div class="user-bar">
     <span class="uname" id="userNombre">—</span>
@@ -708,7 +713,7 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
 
       <div class="row2" id="trazFilaResponsable" style="display:none">
         <div class="field">
-          <label>Responsable de la entrega (para todas las unidades)</label>
+          <label>Responsable de la entrega (para todos los artículos)</label>
           <input type="text" id="tResponsableEntrega" list="lstResponsablesEntrega">
           <datalist id="lstResponsablesEntrega"></datalist>
         </div>
@@ -1121,6 +1126,7 @@ async function cargarRestoEnSegundoPlano() {
     const data = await apiGet({ action: 'getPedidosCompletos', anioDesde: '2026' });
     pedidosCache = ordenarPorNP(data.pedidos);
     cargaCompleta = true;
+    actualizarModoVistaBar(); // saca el aviso "terminando de cargar…" (antes quedaba fijo)
     poblarFiltrosDinamicos();
     onFiltrosChange();
   } catch (err) {
