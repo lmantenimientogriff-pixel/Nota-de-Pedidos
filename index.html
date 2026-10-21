@@ -287,7 +287,7 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
   <div class="hleft">
     <span class="logo-badge">GRIFFOULIERE</span>
     <span class="htitle">Notas de Pedido</span>
-    <span class="hsub">Tablero de gestión · mostrando 2026 en adelante · <span title="Versión del tablero">v20.10.26-h</span></span>
+    <span class="hsub">Tablero de gestión · mostrando 2026 en adelante · <span title="Versión del tablero">v21.10.26-a</span></span>
   </div>
   <div class="user-bar">
     <span class="uname" id="userNombre">—</span>
@@ -710,6 +710,7 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
       <div class="traz-titulo" id="trazTitulo">Trazabilidad</div>
       <div class="hint" id="trazHintGeneral" style="margin-bottom:10px">Este artículo requiere trazabilidad <strong>por artículo</strong>: se arma una ficha por cada artículo de la Cantidad de la nota. Todos los campos son obligatorios para guardar en CUMPLIDO. La Fecha de entrega se toma de la Fecha de Cumplimiento.</div>
       <div id="trazAvisoCantidad" class="traz-alerta-nuevo" style="display:none;margin-bottom:10px"></div>
+      <div id="trazAvisoGuardado" class="traz-info-registrado" style="display:none;margin-bottom:10px"></div>
 
       <div class="row2" id="trazFilaResponsable" style="display:none">
         <div class="field">
@@ -1861,6 +1862,10 @@ const TIPO_CAMPO_TRAZ = { vencRecarga: 'date', vencPrueba: 'date', fechaCert: 'd
 const CAMPOS_COPIABLES_TRAZ = ['patente', 'vencRecarga', 'vencPrueba', 'fechaCert', 'nCert', 'capacidad', 'tipo'];
 
 let unidadesTrazN = 0;          // cuántas fichas hay armadas en el modal
+// Trazabilidad que se está guardando en segundo plano, por fila de nota: así,
+// si se vuelve a abrir la nota antes de que termine, se ve lo recién cargado.
+const trazEnviando = {};
+let trazConsultaFila = null;     // fila cuya trazabilidad se está consultando al abrir el modal
 const idU = (campo, i) => 'tu-' + campo + '-' + i;
 const valU = (campo, i) => { const el = document.getElementById(idU(campo, i)); return el ? el.value.trim() : ''; };
 
@@ -1968,10 +1973,11 @@ function armarUnidadesTraz(p, cat) {
   for (let i = 1; i <= n; i++) html += htmlUnidad(cat, i, n);
   document.getElementById('trazUnidades').innerHTML = html;
 
-  // Precarga: lo ya guardado de cada unidad (por N° de ítem)
-  const existentes = trazabilidadCache
-    .filter(t => Number(t.filaOrigen) === p.fila && t.categoria === cat)
-    .sort((a, b) => (a.item || 1) - (b.item || 1));
+  // Precarga: lo ya guardado de cada artículo (por N° de ítem). Prioridad:
+  // 1) lo que se está guardando ahora mismo, 2) la copia local de la hoja Trazabilidad.
+  const enviando = trazEnviando[p.fila] && trazEnviando[p.fila].categoria === cat ? trazEnviando[p.fila].registros : null;
+  const existentes = (enviando || trazabilidadCache.filter(t => Number(t.filaOrigen) === p.fila && t.categoria === cat))
+    .slice().sort((a, b) => (a.item || 1) - (b.item || 1));
   const set = (campo, i, v) => { const el = document.getElementById(idU(campo, i)); if (el) el.value = v || ''; };
   for (let i = 1; i <= n; i++) {
     const e = existentes.find(t => (t.item || 1) === i);
@@ -1981,8 +1987,12 @@ function armarUnidadesTraz(p, cat) {
     set('vencPrueba', i, e && isoDesdeDDMMYYYY(e.fechaVencPrueba));
     set('fechaCert', i, e && isoDesdeDDMMYYYY(e.fechaCertificacion));
     set('nCert', i, e && e.nCertificado);
-    set('patente', i, String(p.destino || '').trim().toUpperCase());
+    set('patente', i, String((e && e.patenteDestino) || unidadGuardadaEnRegistro(cat, p, e) || p.destino || '').trim().toUpperCase());
   }
+  mostrarAvisoGuardado(existentes, !!enviando);
+  // Nota ya cerrada y la copia local todavía no tiene sus datos (recién abierta la página,
+  // o la recarga en segundo plano no terminó): se consulta solo esta nota.
+  if (!existentes.length && p.estado === 'CUMPLIDO') consultarTrazabilidadDeNota(p, cat);
   const respGuardado = existentes.find(t => t.responsableEntrega);
   document.getElementById('tResponsableEntrega').value = respGuardado ? respGuardado.responsableEntrega : (currentUser ? currentUser.nombre : '');
 
@@ -2001,6 +2011,46 @@ document.getElementById('trazUnidades').addEventListener('input', (ev) => {
   if (!ev.target.dataset || !ev.target.dataset.u) return;
   verificarTodasLasUnidades(); // los duplicados entre unidades dependen de todas
 });
+
+// Registros anteriores a la columna "Patente / Unidad": se toma la unidad del registro maestro
+function unidadGuardadaEnRegistro(cat, p, e) {
+  if (!e || !e.nElementoEntrega) return '';
+  if (cat === 'MATAFUEGO') { const m = buscarMatafuegoCache(e.nElementoEntrega); return m ? m.patente : ''; }
+  if (esCategoriaPerno(cat)) { const x = buscarPernoCache(tipoPernoDesdeTexto(p.articulo, cat), e.nElementoEntrega); return x ? x.unidad : ''; }
+  return '';
+}
+
+function mostrarAvisoGuardado(existentes, enviando) {
+  const caja = document.getElementById('trazAvisoGuardado');
+  if (!existentes.length) { caja.style.display = 'none'; return; }
+  const r = existentes[0];
+  caja.style.display = 'flex';
+  caja.innerHTML = enviando
+    ? '<i class="ti ti-loader-2"></i> Estos datos se están guardando en este momento.'
+    : `<i class="ti ti-circle-check"></i> Trazabilidad ya cargada${r.fechaCarga ? ' el ' + escapeHtml(r.fechaCarga) : ''}${r.usuario ? ' por ' + escapeHtml(r.usuario) : ''}. Si corregís algún dato, al guardar se actualiza el registro.`;
+}
+
+async function consultarTrazabilidadDeNota(p, cat) {
+  if (trazConsultaFila === p.fila) return;
+  trazConsultaFila = p.fila;
+  const caja = document.getElementById('trazAvisoGuardado');
+  caja.style.display = 'flex';
+  caja.innerHTML = '<i class="ti ti-loader-2"></i> Buscando los datos ya cargados de esta nota…';
+  try {
+    const data = await apiGet({ action: 'getTrazabilidadNota', filaOrigen: p.fila });
+    const regs = (data.registros || []).filter(t => t.categoria === cat);
+    // actualiza la copia local con lo que vino
+    trazabilidadCache = trazabilidadCache.filter(t => Number(t.filaOrigen) !== p.fila).concat(data.registros || []);
+    const sigueAbierta = filaEnEdicion && filaEnEdicion.fila === p.fila;
+    const nadaTipeado = [...Array(unidadesTrazN)].every((_, k) => !valU('entrega', k + 1));
+    if (sigueAbierta && nadaTipeado && regs.length) armarUnidadesTraz(filaEnEdicion, cat);
+    else if (sigueAbierta && !regs.length) caja.style.display = 'none';
+  } catch (err) {
+    caja.innerHTML = '<i class="ti ti-alert-triangle"></i> No se pudieron traer los datos ya cargados: cerrá y volvé a abrir la nota.';
+  } finally {
+    trazConsultaFila = null;
+  }
+}
 
 function copiarUnidad1ATodas() {
   for (let i = 2; i <= unidadesTrazN; i++) {
@@ -2186,6 +2236,17 @@ function recolectarUnidadesTraz() {
 async function guardarTrazabilidadSiCorresponde(p, comunes, unidades) {
   const cat = p.categoriaTrazabilidad;
   if (!cat || !unidades.length) return;
+  const fmt = (iso) => iso ? iso.split('-').reverse().join('/') : '';
+  const ahora = new Date();
+  const registrosLocales = unidades.map(u => ({
+    filaOrigen: p.fila, np: p.np, categoria: cat, articulo: p.articulo, destino: p.destino, fechaEntrega: fmt(comunes.fechaEntrega),
+    nElementoEntrega: u.nElementoEntrega, nElementoRecambio: u.nElementoRecambio, fechaVencRecarga: fmt(u.fechaVencRecarga),
+    fechaVencPrueba: fmt(u.fechaVencPrueba), fechaCertificacion: fmt(u.fechaCertificacion), nCertificado: u.nCertificado,
+    usuario: currentUser.usuario, responsableEntrega: comunes.responsableEntrega, item: u.item, patenteDestino: u.patenteDestino,
+    fechaCarga: ahora.toLocaleDateString('es-AR') + ' ' + ahora.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false }),
+    transferencia: comunes.transferencia || ''
+  }));
+  trazEnviando[p.fila] = { categoria: cat, registros: registrosLocales };
   try {
     const resp = await apiGet({
       action: 'guardarTrazabilidadLote',
@@ -2207,12 +2268,16 @@ async function guardarTrazabilidadSiCorresponde(p, comunes, unidades) {
     } else {
       mostrarToast('Trazabilidad guardada: ' + n + (n === 1 ? ' artículo' : ' artículos'), 'ok');
     }
+    // La copia local queda al día al instante (no depende de la recarga completa, que tarda)
+    trazabilidadCache = trazabilidadCache.filter(t => !(Number(t.filaOrigen) === p.fila && t.categoria === cat)).concat(registrosLocales);
     cargarTrazabilidad();
     if (cat === 'MATAFUEGO') cargarMatafuegos();
     if (cat === 'MANGUEROTE') cargarManguerotes();
     if (esCategoriaPerno(cat)) cargarPernos();
   } catch (err) {
     mostrarToast('El pedido se guardó, pero la trazabilidad no: ' + err.message, 'err');
+  } finally {
+    delete trazEnviando[p.fila];
   }
 }
 
@@ -2929,7 +2994,8 @@ async function guardarEdicion() {
     if (filaEnEdicion.categoriaTrazabilidad && estado === 'CUMPLIDO') {
       const comunes = {
         fechaEntrega: document.getElementById('mFechaCumplimiento').value,
-        responsableEntrega: document.getElementById('tResponsableEntrega').value.trim()
+        responsableEntrega: document.getElementById('tResponsableEntrega').value.trim(),
+        transferencia: document.getElementById('mTransferencia').value.trim()
       };
       // en segundo plano, no bloquea el guardado del pedido
       guardarTrazabilidadSiCorresponde(filaEnEdicion, comunes, recolectarUnidadesTraz());
