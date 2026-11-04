@@ -121,6 +121,7 @@ input,select,textarea{font-family:inherit;color:var(--text);outline:none}
 .pill{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap}
 .p-proceso{background:var(--amber-bg);color:var(--amber-text)}
 .p-cumplido{background:var(--green-bg);color:var(--green-text)}
+.p-stock{background:#E9E4F7;color:#3F2D86}
 .p-rechazado{background:var(--red-bg);color:var(--red-text)}
 .p-pendiente{background:var(--blue-bg);color:var(--blue-text)}
 .p-otro{background:var(--surface3);color:var(--text2)}
@@ -205,6 +206,22 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
 .traz-alerta-titulo{font-size:12px;font-weight:700;color:var(--amber-text);display:flex;align-items:center;gap:6px;margin-bottom:4px}
 .traz-check{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--amber-text);font-weight:600;cursor:pointer;margin-top:6px}
 .traz-check input{width:16px;height:16px;accent-color:var(--amber);cursor:pointer}
+.np-hermanas{border:1px solid var(--border2);border-radius:var(--r);padding:12px 14px;margin:14px 0 4px;background:var(--surface)}
+.np-tit{font-size:12.5px;font-weight:700;color:var(--text)}
+.np-sub{font-size:11px;color:var(--text3);margin:3px 0 10px}
+.np-lista{display:flex;flex-direction:column;gap:6px;max-height:420px;overflow:auto}
+.np-linea{display:flex;gap:10px;align-items:flex-start;font-size:11.5px;padding:8px 10px;border-radius:6px;background:var(--bg);cursor:pointer}
+.np-linea.off{cursor:default;opacity:.7}
+.np-linea input[type=checkbox]{width:16px;height:16px;margin-top:1px;accent-color:var(--rojo);flex:none}
+.np-linea .art{font-weight:600;color:var(--text)}
+.np-linea .sub{color:var(--text3);font-size:10.5px;margin-top:2px}
+.np-linea .motivo{color:var(--amber-text);font-size:10.5px;font-weight:600;margin-top:2px}
+.np-linea .ok{color:var(--green-text);font-size:10.5px;font-weight:600;margin-top:2px}
+.np-oc{display:flex;align-items:center;gap:6px;margin-top:5px;font-size:10.5px;color:var(--amber-text);font-weight:600}
+.np-oc input{width:120px;padding:4px 8px;font-size:11px;border:1px solid var(--amber);border-radius:4px;background:#fff}
+.np-pie{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;font-size:11.5px}
+.np-pie button{font-size:11px;padding:5px 10px}
+.np-resumen{color:var(--text2);font-weight:600}
 .traz-unidad{border:1px solid var(--border2);border-left:4px solid var(--rojo);border-radius:var(--r);padding:10px 12px 2px;margin-bottom:10px;background:var(--surface)}
 .traz-unidad.con-error{border-left-color:var(--red);background:var(--red-bg)}
 .traz-unidad-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px}
@@ -287,7 +304,7 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
   <div class="hleft">
     <span class="logo-badge">GRIFFOULIERE</span>
     <span class="htitle">Notas de Pedido</span>
-    <span class="hsub">Tablero de gestión · mostrando 2026 en adelante · <span title="Versión del tablero">v21.10.26-a</span></span>
+    <span class="hsub">Tablero de gestión · mostrando 2026 en adelante · <span title="Versión del tablero">v03.11.26-d</span></span>
   </div>
   <div class="user-bar">
     <span class="uname" id="userNombre">—</span>
@@ -445,9 +462,15 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
     <div class="kpi-grid" id="kpiGridExtra"></div>
 
     <div class="chart-card" style="margin-bottom:14px">
-      <div class="chart-card-title">Evolución mensual: ítems cargados vs. % Cumplidos + Cumplidos Depósito</div>
+      <div class="chart-card-title">Evolución mensual: ítems cargados vs. % Cumplidos + Depósito + Stock</div>
       <div class="chart-wrap"><canvas id="chart-kpi-evolucion"></canvas></div>
       <div class="chart-desc">Compara cuántos ítems se cargaron cada mes (barras) contra qué porcentaje de esos ítems ya está Cumplido o Cumplido en Depósito (línea). Sirve para ver si el ritmo de resolución acompaña al volumen de pedidos.</div>
+    </div>
+
+    <div class="chart-card" style="margin-bottom:14px">
+      <div class="chart-card-title">Ingresos a stock por mes</div>
+      <div class="chart-wrap"><canvas id="chart-kpi-stock"></canvas></div>
+      <div class="chart-desc">Cantidad de ítems que se pasaron a INGRESO A STOCK cada mes desde Gestionar. Se cuenta por la fecha en que se hizo el cambio, respetando los filtros de arriba.</div>
     </div>
 
     <div class="chart-card">
@@ -657,6 +680,7 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
         <option value="PENDIENTE">PENDIENTE</option>
         <option value="CUMPLIDO">CUMPLIDO</option>
         <option value="CUMPLIDO EN DEPOSITO">CUMPLIDO EN DEPOSITO</option>
+        <option value="INGRESO A STOCK">INGRESO A STOCK</option>
         <option value="RECHAZADO">RECHAZADO</option>
         <option value="PENDIENTE/REPROGRAMADO">PENDIENTE/REPROGRAMADO</option>
       </select>
@@ -693,7 +717,7 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
       <div class="field">
         <label>Orden de compra</label>
         <input type="text" id="mOrdenCompra">
-        <div class="hint">Obligatoria si hay PIM/SC cargado. En CUMPLIDO EN DEPOSITO se pregunta si hace falta (si no, se completa como "NA")</div>
+        <div class="hint">Obligatoria si hay PIM/SC cargado. Sin PIM/SC, al cerrar (Cumplido, en depósito o stock) se pregunta si hace falta; si no, queda "NA"</div>
       </div>
       <div class="field">
         <label>Remito</label>
@@ -704,6 +728,16 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
     <div class="field">
       <label>Observaciones de depósito</label>
       <textarea id="mObsDeposito" placeholder="Notas internas de gestión"></textarea>
+    </div>
+
+    <div id="npHermanas" class="np-hermanas" style="display:none">
+      <div class="np-tit" id="npTitulo">Otros artículos de la NP que salen con esta transferencia</div>
+      <div class="np-sub" id="npSub"></div>
+      <div class="np-lista" id="npLista"></div>
+      <div class="np-pie">
+        <button type="button" id="npTildarTodos"><i class="ti ti-checks"></i> Tildar todos los habilitados</button>
+        <span class="np-resumen" id="npResumen"></span>
+      </div>
     </div>
 
     <div id="trazSection" class="traz-section" style="display:none">
@@ -1328,7 +1362,7 @@ function esPendiente(estado) {
 }
 function esUrgentePendiente(p) {
   const e = (p.estado || '').toUpperCase();
-  const yaResuelto = e.indexOf('CUMPLIDO') === 0 || e === 'RECHAZADO';
+  const yaResuelto = e.indexOf('CUMPLIDO') === 0 || e === 'RECHAZADO' || e === 'INGRESO A STOCK';
   return p.tipoPedido === 'URGENTE' && !yaResuelto;
 }
 
@@ -1340,6 +1374,7 @@ function claseEstado(estado) {
   if (!estado) return 'p-otro';
   const e = estado.toUpperCase();
   if (e.indexOf('CUMPLIDO') === 0) return 'p-cumplido';
+  if (e === 'INGRESO A STOCK') return 'p-stock';
   if (e === 'RECHAZADO') return 'p-rechazado';
   if (e === 'EN PROCESO') return 'p-proceso';
   if (e.indexOf('PENDIENTE') === 0) return 'p-pendiente';
@@ -1619,12 +1654,13 @@ function renderKPI(filtrados) {
   const kpiGrid = document.getElementById('kpiGridExtra');
   if (!total) {
     kpiGrid.innerHTML = '<div class="kpi-x destacado"><div class="lbl">Sin datos</div><div class="desc">No hay ítems que coincidan con los filtros actuales.</div></div>';
-    ['chart-kpi-evolucion','chart-kpi-responsable'].forEach(destruirChart);
+    ['chart-kpi-evolucion','chart-kpi-responsable','chart-kpi-stock'].forEach(destruirChart);
     return;
   }
 
   const nCumplidas = filtrados.filter(p => p.estado === 'CUMPLIDO').length;
   const nCumplidasDeposito = filtrados.filter(p => p.estado === 'CUMPLIDO EN DEPOSITO').length;
+  const nStock = filtrados.filter(p => p.estado === 'INGRESO A STOCK').length;
   const nTransferencia = filtrados.filter(p => String(p.transferencia || '').trim()).length;
   const nPim = filtrados.filter(p => String(p.pim || '').trim()).length;
   const nPendiente = filtrados.filter(p => esPendiente(p.estado)).length;
@@ -1633,10 +1669,11 @@ function renderKPI(filtrados) {
   const nConFecha = filtrados.filter(p => String(p.fechaCumplimiento || '').trim()).length;
 
   const tarjetas = [
-    { destacado: true, lbl: '% Cumplidos + Cumplidos Depósito', val: pct(nCumplidas + nCumplidasDeposito, total), color: 'ok',
-      desc: 'Suma de Cumplidos y Cumplidos en Depósito: todo lo que ya está resuelto, retirado o esperando en depósito.' },
+    { destacado: true, lbl: '% Cumplidos + Depósito + Stock', val: pct(nCumplidas + nCumplidasDeposito + nStock, total), color: 'ok',
+      desc: 'Todo lo que ya llegó: cumplido y retirado, esperando en depósito, o ingresado a stock.' },
     { lbl: '% Cumplidas', val: pct(nCumplidas, total), color: 'ok', desc: 'Ítems ya marcados como Cumplido sobre el total filtrado.' },
     { lbl: '% Cumplidas Depósito', val: pct(nCumplidasDeposito, total), color: 'ok', desc: 'Llegaron a depósito pero todavía no se retiraron.' },
+    { lbl: '% Ingreso a stock', val: pct(nStock, total), color: '', desc: 'Ítems pasados a INGRESO A STOCK desde Gestionar.' },
     { lbl: '% Con Fecha de Cumplimiento', val: pct(nConFecha, total), color: '', desc: 'Ya tienen registrada la fecha real de recepción.' },
     { lbl: '% Con Transferencia', val: pct(nTransferencia, total), color: '', desc: 'Ya tienen cargado un N° de Transferencia.' },
     { lbl: '% Con PIM/SC', val: pct(nPim, total), color: '', desc: 'Ya tienen cargado un N° de PIM/SC.' },
@@ -1664,7 +1701,7 @@ function renderKPI(filtrados) {
     const key = f.getFullYear() + '-' + String(f.getMonth() + 1).padStart(2, '0');
     if (!porMes[key]) porMes[key] = { total: 0, resueltos: 0 };
     porMes[key].total++;
-    if (p.estado === 'CUMPLIDO' || p.estado === 'CUMPLIDO EN DEPOSITO') porMes[key].resueltos++;
+    if (p.estado === 'CUMPLIDO' || p.estado === 'CUMPLIDO EN DEPOSITO' || p.estado === 'INGRESO A STOCK') porMes[key].resueltos++;
   });
   const keysOrd = Object.keys(porMes).sort();
   if (keysOrd.length && ctxEvo) {
@@ -1675,7 +1712,7 @@ function renderKPI(filtrados) {
         labels,
         datasets: [
           { type: 'bar', label: 'Ítems', data: keysOrd.map(k => porMes[k].total), backgroundColor: '#e8e7e3', order: 2, yAxisID: 'yItems' },
-          { type: 'line', label: '% Cumplidos + Cumplidos Depósito', data: keysOrd.map(k => pct(porMes[k].resueltos, porMes[k].total)), borderColor: '#C00000', backgroundColor: '#C00000', tension: 0.3, order: 1, yAxisID: 'yPct' }
+          { type: 'line', label: '% Cumplidos + Depósito + Stock', data: keysOrd.map(k => pct(porMes[k].resueltos, porMes[k].total)), borderColor: '#C00000', backgroundColor: '#C00000', tension: 0.3, order: 1, yAxisID: 'yPct' }
         ]
       },
       options: {
@@ -1690,6 +1727,29 @@ function renderKPI(filtrados) {
           yPct: { position: 'right', beginAtZero: true, max: 100, grid: { display: false }, ticks: { font: { size: 10 }, callback: (v) => v + '%' } }
         }
       }
+    });
+  }
+
+  // ----- Gráfico: ingresos a stock por mes (por fecha de ingreso, col Z) -----
+  destruirChart('chart-kpi-stock');
+  const ctxStock = document.getElementById('chart-kpi-stock');
+  const stockMes = {};
+  filtrados.forEach(p => {
+    const f = parseFechaDDMMYYYY(p.fechaIngresoStock);
+    if (!f) return;
+    const key = f.getFullYear() + '-' + String(f.getMonth() + 1).padStart(2, '0');
+    stockMes[key] = (stockMes[key] || 0) + 1;
+  });
+  const keysStock = Object.keys(stockMes).sort();
+  if (ctxStock && keysStock.length) {
+    const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    charts['chart-kpi-stock'] = new Chart(ctxStock, {
+      type: 'bar',
+      data: { labels: keysStock.map(k => { const [a, m] = k.split('-'); return MESES[parseInt(m, 10) - 1] + ' ' + a; }),
+        datasets: [{ label: 'Ítems ingresados a stock', data: keysStock.map(k => stockMes[k]), backgroundColor: '#6D5BC4' }] },
+      options: { responsive: true, maintainAspectRatio: false, layout: { padding: { top: 22 } },
+        plugins: { legend: { display: false }, datalabels: { anchor: 'end', align: 'top', color: '#3F2D86', font: { size: 10, weight: 'bold' } } },
+        scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } }, y: { beginAtZero: true, ticks: { font: { size: 10 }, precision: 0 } } } }
     });
   }
 
@@ -1747,6 +1807,148 @@ function poblarSelectResponsable(valorActual) {
   sel.value = valorActual || '';
 }
 
+/*******************************************************
+ * OTROS ARTÍCULOS DE LA NP QUE SALEN CON LA MISMA TRANSFERENCIA
+ * Se tildan los que corresponden; a esos se les carga CUMPLIDO,
+ * transferencia, responsable y fecha (y la OC si les faltaba).
+ *******************************************************/
+let npSeleccion = {}; // { fila: { tildado: bool, oc: '' } } — se conserva mientras se edita el modal
+const vacioTxt = (v) => !String(v == null ? '' : v).trim();
+
+function lineasHermanas(p) {
+  return pedidosCache.filter(x => String(x.np) === String(p.np) && x.fila !== p.fila).sort((a, b) => a.fila - b.fila);
+}
+
+// Situación de cada artículo hermano: { habilitado, texto, clase, necesitaOc, yaCumplida }
+function situacionHermana(x, transferencia) {
+  const t = String(x.transferencia || '').trim();
+  if (x.estado === 'RECHAZADO') return { habilitado: false, texto: 'Rechazada', clase: 'motivo' };
+  if (t) {
+    if (x.estado === 'CUMPLIDO' && t === transferencia) return { habilitado: false, yaCumplida: true, texto: 'Ya cumplida con la transferencia ' + t, clase: 'ok' };
+    return { habilitado: false, texto: 'Ya tiene transferencia ' + t, clase: 'motivo' };
+  }
+  if (x.categoriaTrazabilidad) return { habilitado: false, texto: 'Requiere trazabilidad: cerrar desde su Gestionar', clase: 'motivo' };
+  const s = { habilitado: true, texto: '', clase: 'sub' };
+  if (vacioTxt(x.ordenCompra)) { s.necesitaOc = true; s.permiteNA = vacioTxt(x.pim); } // con PIM/SC, NA no vale
+  if ((x.estado === 'CUMPLIDO EN DEPOSITO' || x.estado === 'INGRESO A STOCK') && x.fechaCumplimientoISO) s.texto = 'Conserva su fecha ' + x.fechaCumplimientoISO.split('-').reverse().join('/');
+  return s;
+}
+
+function npPuedeMostrarse() {
+  return filaEnEdicion && document.getElementById('mEstado').value === 'CUMPLIDO' &&
+    !vacioTxt(document.getElementById('mTransferencia').value) && lineasHermanas(filaEnEdicion).length > 0;
+}
+
+function renderHermanas() {
+  const caja = document.getElementById('npHermanas');
+  if (!npPuedeMostrarse()) { caja.style.display = 'none'; return; }
+  caja.style.display = 'block';
+  const p = filaEnEdicion;
+  const transf = document.getElementById('mTransferencia').value.trim();
+  const fecha = document.getElementById('mFechaCumplimiento').value;
+  const resp = document.getElementById('mResponsable').value;
+  document.getElementById('npTitulo').textContent = 'Otros artículos de la NP ' + p.np + ' que salen con la transferencia ' + transf;
+  document.getElementById('npSub').innerHTML = 'Tildá los que corresponden. Se cierran como CUMPLIDO con responsable <strong>' +
+    escapeHtml(resp || '(sin responsable)') + '</strong> y fecha <strong>' + (fecha ? fecha.split('-').reverse().join('/') : '(cargala arriba)') + '</strong>.';
+
+  document.getElementById('npLista').innerHTML = lineasHermanas(p).map(x => {
+    const s = situacionHermana(x, transf);
+    const sel = npSeleccion[x.fila] || (npSeleccion[x.fila] = { tildado: false, oc: '', na: false });
+    if (!s.habilitado) sel.tildado = false;
+    const ocFaltante = s.necesitaOc && vacioTxt(sel.oc) && !sel.na;
+    if (ocFaltante) sel.tildado = false;
+    const marcado = s.yaCumplida || sel.tildado;
+    const bloqueado = !s.habilitado || ocFaltante;
+    return `<label class="np-linea ${s.habilitado ? '' : 'off'}">
+      <input type="checkbox" data-np-fila="${x.fila}" ${marcado ? 'checked' : ''} ${bloqueado ? 'disabled' : ''}>
+      <div style="flex:1">
+        <div class="art">${escapeHtml(x.articulo || '')}${x.cantidad ? ' (x' + escapeHtml(String(x.cantidad)) + ')' : ''}</div>
+        <div class="sub">${escapeHtml(x.estado || 'SIN ESTADO')}</div>
+        ${s.texto ? `<div class="${s.clase}">${escapeHtml(s.texto)}</div>` : ''}
+        ${s.necesitaOc ? `<div class="np-oc">Falta OC: <input type="text" data-np-oc="${x.fila}" value="${escapeHtml(sel.oc)}" placeholder="N° de OC" ${sel.na ? 'disabled' : ''}>
+          ${s.permiteNA ? `<label style="display:flex;align-items:center;gap:4px;font-weight:600"><input type="checkbox" data-np-na="${x.fila}" ${sel.na ? 'checked' : ''}> No requiere (NA)</label>`
+            : '<span style="font-weight:500">(tiene PIM/SC: NA no vale)</span>'}</div>` : ''}
+      </div></label>`;
+  }).join('');
+  actualizarResumenNp();
+}
+
+function seleccionNp() {
+  if (!npPuedeMostrarse()) return [];
+  const transf = document.getElementById('mTransferencia').value.trim();
+  return lineasHermanas(filaEnEdicion).filter(x => {
+    const s = situacionHermana(x, transf), sel = npSeleccion[x.fila];
+    return s.habilitado && sel && sel.tildado && !(s.necesitaOc && vacioTxt(sel.oc) && !sel.na);
+  });
+}
+
+function actualizarResumenNp() {
+  const elegidos = seleccionNp();
+  const transf = document.getElementById('mTransferencia').value.trim();
+  const conservan = elegidos.filter(x => (x.estado === 'CUMPLIDO EN DEPOSITO' || x.estado === 'INGRESO A STOCK') && x.fechaCumplimientoISO).length;
+  const conOc = elegidos.filter(x => situacionHermana(x, transf).necesitaOc).length;
+  document.getElementById('npResumen').textContent = !elegidos.length ? 'Ninguno tildado' :
+    'Se van a cerrar ' + elegidos.length + (elegidos.length === 1 ? ' artículo más' : ' artículos más') +
+    (conservan ? ' · ' + conservan + ' conserva' + (conservan > 1 ? 'n' : '') + ' su fecha' : '') +
+    (conOc ? ' · ' + conOc + ' con OC nueva' : '');
+}
+
+document.getElementById('npLista').addEventListener('change', (ev) => {
+  const f = ev.target.dataset.npFila;
+  if (f) { npSeleccion[f].tildado = ev.target.checked; actualizarResumenNp(); return; }
+  const fn = ev.target.dataset.npNa;
+  if (fn) {
+    npSeleccion[fn].na = ev.target.checked;
+    const oc = document.querySelector(`[data-np-oc="${fn}"]`), chk = document.querySelector(`[data-np-fila="${fn}"]`);
+    if (ev.target.checked) { oc.value = ''; npSeleccion[fn].oc = ''; }
+    oc.disabled = ev.target.checked;
+    chk.disabled = !ev.target.checked && vacioTxt(oc.value);
+    if (chk.disabled) { chk.checked = false; npSeleccion[fn].tildado = false; }
+    actualizarResumenNp();
+  }
+});
+document.getElementById('npLista').addEventListener('input', (ev) => {
+  const f = ev.target.dataset.npOc;
+  if (!f) return;
+  npSeleccion[f].oc = ev.target.value;
+  const chk = document.querySelector(`[data-np-fila="${f}"]`);
+  const vacia = vacioTxt(ev.target.value);
+  chk.disabled = vacia;                       // sin OC no se puede tildar
+  if (vacia) { chk.checked = false; npSeleccion[f].tildado = false; }
+  actualizarResumenNp();
+});
+document.getElementById('npTildarTodos').addEventListener('click', () => {
+  document.querySelectorAll('#npLista input[data-np-fila]').forEach(chk => {
+    if (!chk.disabled) { chk.checked = true; npSeleccion[chk.dataset.npFila].tildado = true; }
+  });
+  actualizarResumenNp();
+});
+['mTransferencia', 'mFechaCumplimiento'].forEach(id => document.getElementById(id).addEventListener('input', renderHermanas));
+['mEstado', 'mResponsable'].forEach(id => document.getElementById(id).addEventListener('change', renderHermanas));
+
+// Se llama después de guardar la línea principal. Devuelve el texto para el aviso final.
+async function cerrarHermanasTildadas(p, elegidos, datos) {
+  if (!elegidos.length) return '';
+  const transf = datos.transferencia;
+  const items = elegidos.map(x => ({ fila: x.fila,
+    oc: situacionHermana(x, transf).necesitaOc ? (npSeleccion[x.fila].na ? 'NA' : (npSeleccion[x.fila].oc || '').trim()) : '' }));
+  try {
+    const r = await apiGet({ action: 'cerrarArticulosNota', np: p.np, filaOrigen: p.fila, transferencia: transf,
+      fechaCumplimiento: datos.fecha, responsable: datos.responsable, items: JSON.stringify(items),
+      usuario: currentUser.usuario, nombreUsuario: currentUser.nombre });
+    (r.pedidos || []).forEach(nuevo => {
+      nuevo.deposito = clasificarDeposito(nuevo.centroCosto);
+      const i = pedidosCache.findIndex(x => x.fila === nuevo.fila);
+      if (i >= 0) pedidosCache[i] = nuevo;
+    });
+    let msg = ' y ' + r.cerrados.length + (r.cerrados.length === 1 ? ' artículo más' : ' artículos más') + ' de la NP';
+    if (r.omitidos.length) msg += '. No se cerraron: ' + r.omitidos.join('; ');
+    return msg;
+  } catch (err) {
+    return '. Los otros artículos NO se cerraron: ' + err.message;
+  }
+}
+
 function abrirModal(fila) {
   const p = pedidosCache.find(x => x.fila === fila);
   if (!p) return;
@@ -1771,6 +1973,8 @@ function abrirModal(fila) {
 
   actualizarBloqueoFechaCumplimiento();
   actualizarSeccionTrazabilidad(p, true);
+  npSeleccion = {};
+  renderHermanas();
   document.getElementById('modalOverlay').classList.add('open');
 }
 
@@ -1785,7 +1989,7 @@ function actualizarBloqueoFechaCumplimiento() {
   const input = document.getElementById('mFechaCumplimiento');
   const hint = document.getElementById('hintFechaCumplimiento');
 
-  const bloquear = estadoOriginal === 'CUMPLIDO EN DEPOSITO' && estadoNuevo === 'CUMPLIDO';
+  const bloquear = (estadoOriginal === 'CUMPLIDO EN DEPOSITO' || estadoOriginal === 'INGRESO A STOCK') && estadoNuevo === 'CUMPLIDO';
 
   input.disabled = bloquear;
   if (bloquear) {
@@ -2945,7 +3149,7 @@ async function guardarEdicion() {
     ordenCompraInput.focus();
     return;
   }
-  if (estado === 'CUMPLIDO EN DEPOSITO' && !ordenCompraInput.value.trim()) {
+  if (['CUMPLIDO EN DEPOSITO', 'CUMPLIDO', 'INGRESO A STOCK'].includes(estado) && !ordenCompraInput.value.trim()) {
     const requiereOC = confirm('¿Esta Nota de Pedido requiere Orden de Compra?\n\nAceptar = Sí, la voy a cargar\nCancelar = No, completar como "NA"');
     if (requiereOC) {
       mostrarToast('Cargá el N° de Orden de compra antes de guardar', 'err');
@@ -2962,6 +3166,22 @@ async function guardarEdicion() {
       if (foco) { foco.scrollIntoView({ block: 'center' }); foco.focus(); }
       return;
     }
+  }
+
+  // Otros artículos de la NP tildados para cerrar con la misma transferencia
+  const npElegidos = seleccionNp();
+  const npDatos = { transferencia: transferencia, fecha: document.getElementById('mFechaCumplimiento').value,
+    responsable: document.getElementById('mResponsable').value };
+  if (npElegidos.length) {
+    if (!npDatos.fecha) {
+      mostrarToast('Para cerrar los otros artículos tildados, cargá la Fecha de cumplimiento', 'err');
+      document.getElementById('mFechaCumplimiento').focus();
+      return;
+    }
+    if (!confirm('Además de esta línea, se van a cerrar como CUMPLIDO ' + npElegidos.length +
+        (npElegidos.length === 1 ? ' artículo más' : ' artículos más') + ' de la NP ' + filaEnEdicion.np +
+        ' con la transferencia ' + transferencia + ':\n\n' + npElegidos.map(x => '• ' + x.articulo).join('\n') +
+        '\n\nAceptar = confirmar · Cancelar = volver')) return;
   }
 
   const btn = document.getElementById('btnGuardarModal');
@@ -3001,7 +3221,8 @@ async function guardarEdicion() {
       guardarTrazabilidadSiCorresponde(filaEnEdicion, comunes, recolectarUnidadesTraz());
     }
 
-    mostrarToast('Nota N° ' + data.pedido.np + ' actualizada', 'ok');
+    const extra = await cerrarHermanasTildadas(filaEnEdicion, npElegidos, npDatos);
+    mostrarToast('Nota N° ' + data.pedido.np + ' actualizada' + extra, extra.includes('No se cerraron') || extra.includes('NO se cerraron') ? 'err' : 'ok');
     cerrarModal();
     poblarFiltrosDinamicos();
     onFiltrosChange();
@@ -3190,17 +3411,35 @@ document.getElementById('usrModalOverlay').addEventListener('click', (ev) => {
 function obtenerItemsInforme() {
   return pedidosFiltrados().filter(p => p.estado === 'CUMPLIDO EN DEPOSITO');
 }
+function obtenerItemsStock() {
+  return pedidosFiltrados().filter(p => p.estado === 'INGRESO A STOCK');
+}
 
 function renderInforme() {
   const items = obtenerItemsInforme();
+  const stock = obtenerItemsStock();
   const hoy = new Date().toLocaleDateString('es-AR');
 
   document.getElementById('informeTitulo').textContent = 'Repuestos en depósito — ' + hoy;
-  document.getElementById('informeSubtitulo').textContent = items.length + ' ítem(s) esperando ser retirados';
+  document.getElementById('informeSubtitulo').textContent = items.length + ' ítem(s) esperando ser retirados · ' + stock.length + ' en stock';
 
   const cont = document.getElementById('informeContent');
+  const seccionStock = !stock.length ? '' : `
+    <div style="font-size:13px;font-weight:700;margin:18px 0 8px">En stock (${stock.length})</div>
+    <div class="tbl-card"><div class="twrap" style="display:block"><table>
+      <thead><tr><th>N° NP</th><th>Artículo</th><th>Cant.</th><th>Destino</th><th>Solicitante</th><th>Centro de costo</th><th>Llegó a depósito</th><th>Ingresó a stock</th></tr></thead>
+      <tbody>${stock.map(p => `<tr>
+        <td class="nowrap"><strong>${escapeHtml(String(p.np))}</strong></td>
+        <td style="white-space:normal;max-width:300px">${escapeHtml(p.articulo || '')}</td>
+        <td class="nowrap" style="text-align:center">${escapeHtml(String(p.cantidad || ''))}</td>
+        <td class="nowrap">${escapeHtml(p.destino || '—')}</td>
+        <td style="white-space:normal;max-width:160px">${escapeHtml(p.generador || '—')}</td>
+        <td style="white-space:normal;max-width:180px">${escapeHtml(p.centroCosto || '—')}</td>
+        <td class="nowrap">${escapeHtml(p.fechaCumplimiento || '—')}</td>
+        <td class="nowrap">${escapeHtml(p.fechaIngresoStock || '—')}</td></tr>`).join('')}</tbody>
+    </table></div></div>`;
   if (!items.length) {
-    cont.innerHTML = '<div class="tbl-card"><div class="empty">No hay repuestos en depósito con los filtros actuales</div></div>';
+    cont.innerHTML = '<div class="tbl-card"><div class="empty">No hay repuestos en depósito con los filtros actuales</div></div>' + seccionStock;
     return;
   }
 
@@ -3227,7 +3466,7 @@ function renderInforme() {
         </table>
       </div>
     </div>
-  `;
+  ` + seccionStock;
 }
 
 function generarTextoInforme(items) {
@@ -3240,12 +3479,20 @@ function generarTextoInforme(items) {
     texto += `   Centro de costo: ${p.centroCosto || '-'}\n`;
     texto += `   Llegó a depósito: ${p.fechaCumplimiento || '-'}\n\n`;
   });
+  const stock = obtenerItemsStock();
+  if (stock.length) {
+    texto += `\nEN STOCK: ${stock.length} ítem(s)\n\n`;
+    stock.forEach(p => {
+      texto += `• NP ${p.np} — ${p.articulo || ''} (x${p.cantidad || 1})\n`;
+      texto += `   Destino: ${p.destino || '-'}  |  Llegó a depósito: ${p.fechaCumplimiento || '-'}  |  Ingresó a stock: ${p.fechaIngresoStock || '-'}\n\n`;
+    });
+  }
   return texto;
 }
 
 async function copiarTextoInforme() {
   const items = obtenerItemsInforme();
-  if (!items.length) { mostrarToast('No hay repuestos en depósito para informar', 'err'); return; }
+  if (!items.length && !obtenerItemsStock().length) { mostrarToast('No hay repuestos en depósito para informar', 'err'); return; }
   const texto = generarTextoInforme(items);
   try {
     await navigator.clipboard.writeText(texto);
@@ -3257,7 +3504,7 @@ async function copiarTextoInforme() {
 
 function abrirEmailInforme() {
   const items = obtenerItemsInforme();
-  if (!items.length) { mostrarToast('No hay repuestos en depósito para informar', 'err'); return; }
+  if (!items.length && !obtenerItemsStock().length) { mostrarToast('No hay repuestos en depósito para informar', 'err'); return; }
   const hoy = new Date().toLocaleDateString('es-AR');
   const asunto = encodeURIComponent('Informe de repuestos en depósito - ' + hoy);
   const cuerpo = encodeURIComponent(generarTextoInforme(items));
@@ -3266,20 +3513,27 @@ function abrirEmailInforme() {
 
 function exportarInformeExcel() {
   const items = obtenerItemsInforme();
-  if (!items.length) { mostrarToast('No hay datos para exportar', 'err'); return; }
+  if (!items.length && !obtenerItemsStock().length) { mostrarToast('No hay datos para exportar', 'err'); return; }
   const filas = items.map(p => ({
     'N° NP': p.np, 'Artículo': p.articulo, 'Cantidad': p.cantidad, 'Destino': p.destino,
     'Solicitante': p.generador, 'Centro de costo': p.centroCosto, 'Llegó a depósito': p.fechaCumplimiento
   }));
-  const ws = XLSX.utils.json_to_sheet(filas);
+  const ws = XLSX.utils.json_to_sheet(filas.length ? filas : [{ 'N° NP': 'Sin repuestos en depósito' }]);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Repuestos en Deposito');
+  const stock = obtenerItemsStock();
+  if (stock.length) {
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(stock.map(p => ({
+      'N° NP': p.np, 'Artículo': p.articulo, 'Cantidad': p.cantidad, 'Destino': p.destino, 'Solicitante': p.generador,
+      'Centro de costo': p.centroCosto, 'Llegó a depósito': p.fechaCumplimiento, 'Ingresó a stock': p.fechaIngresoStock }))), 'En stock');
+  }
   XLSX.writeFile(wb, 'informe_deposito_' + new Date().toISOString().slice(0,10) + '.xlsx');
 }
 
 function exportarInformePDF() {
   const items = obtenerItemsInforme();
-  if (!items.length) { mostrarToast('No hay datos para exportar', 'err'); return; }
+  const stock = obtenerItemsStock();
+  if (!items.length && !stock.length) { mostrarToast('No hay datos para exportar', 'err'); return; }
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'landscape' });
 
@@ -3303,6 +3557,18 @@ function exportarInformePDF() {
       doc.text('Griffouliere S.A. — Página ' + doc.internal.getNumberOfPages(), 10, doc.internal.pageSize.getHeight() - 6);
     }
   });
+  if (stock.length) {
+    const yIni = (doc.lastAutoTable ? doc.lastAutoTable.finalY : 20) + 10;
+    doc.setFontSize(10); doc.setTextColor(26, 26, 26);
+    doc.text('En stock (' + stock.length + ')', 10, yIni);
+    doc.autoTable({
+      startY: yIni + 3,
+      head: [['N° NP','Artículo','Cant.','Destino','Solicitante','Centro de costo','Llegó a depósito','Ingresó a stock']],
+      body: stock.map(p => [p.np, p.articulo, p.cantidad, p.destino, p.generador, p.centroCosto, p.fechaCumplimiento, p.fechaIngresoStock]),
+      styles: { fontSize: 7 },
+      headStyles: { fillColor: [63, 45, 134] }
+    });
+  }
 
   doc.save('informe_deposito_' + new Date().toISOString().slice(0,10) + '.pdf');
 }
