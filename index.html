@@ -272,6 +272,8 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
 .usr-card-actions{display:flex;gap:6px}
 .usr-card-actions button{font-size:10px;padding:4px 9px}
 .usr-modal .field select{cursor:pointer}
+@keyframes modalFijo{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+.modal.modal-fijo{animation:modalFijo .35s ease}
 </style>
 </head>
 <body>
@@ -304,7 +306,7 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
   <div class="hleft">
     <span class="logo-badge">GRIFFOULIERE</span>
     <span class="htitle">Notas de Pedido</span>
-    <span class="hsub">Tablero de gestión · mostrando 2026 en adelante · <span title="Versión del tablero">v03.11.26-d</span></span>
+    <span class="hsub">Tablero de gestión · mostrando 2026 en adelante · <span title="Versión del tablero">v04.11.26</span></span>
   </div>
   <div class="user-bar">
     <span class="uname" id="userNombre">—</span>
@@ -2751,9 +2753,15 @@ async function guardarMatafuego() {
   }
 }
 
-document.getElementById('mataModalOverlay').addEventListener('click', (ev) => {
-  if (ev.target.id === 'mataModalOverlay') cerrarModalMatafuego();
-});
+/* Las ventanas de edición solo se cierran con Cancelar o Guardar:
+   un toque fuera de la ventana no la cierra (evita perder lo cargado). */
+function avisarModalFijo(ev) {
+  if (ev.target !== ev.currentTarget) return;
+  const m = ev.currentTarget.querySelector('.modal');
+  if (!m) return;
+  m.classList.remove('modal-fijo'); void m.offsetWidth; m.classList.add('modal-fijo');
+}
+document.getElementById('mataModalOverlay').addEventListener('click', avisarModalFijo);
 
 /*******************************************************
  * TAB PERNOS
@@ -2943,9 +2951,7 @@ async function guardarPerno() {
     btn.innerHTML = '<i class="ti ti-device-floppy"></i> Guardar';
   }
 }
-document.getElementById('pernoModalOverlay').addEventListener('click', (ev) => {
-  if (ev.target.id === 'pernoModalOverlay') cerrarModalPerno();
-});
+document.getElementById('pernoModalOverlay').addEventListener('click', avisarModalFijo);
 
 /*******************************************************
  * TAB MANGUEROTES
@@ -3117,9 +3123,7 @@ async function guardarManguerote() {
   }
 }
 
-document.getElementById('mangModalOverlay').addEventListener('click', (ev) => {
-  if (ev.target.id === 'mangModalOverlay') cerrarModalManguerote();
-});
+document.getElementById('mangModalOverlay').addEventListener('click', avisarModalFijo);
 
 function cerrarModal() {
   document.getElementById('modalOverlay').classList.remove('open');
@@ -3234,9 +3238,7 @@ async function guardarEdicion() {
   }
 }
 
-document.getElementById('modalOverlay').addEventListener('click', (ev) => {
-  if (ev.target.id === 'modalOverlay') cerrarModal();
-});
+document.getElementById('modalOverlay').addEventListener('click', avisarModalFijo);
 
 /*******************************************************
  * TAB LOG DE CAMBIOS
@@ -3401,9 +3403,7 @@ async function eliminarUsuarioConfirm(usuario) {
   }
 }
 
-document.getElementById('usrModalOverlay').addEventListener('click', (ev) => {
-  if (ev.target.id === 'usrModalOverlay') cerrarModalUsuario();
-});
+document.getElementById('usrModalOverlay').addEventListener('click', avisarModalFijo);
 
 /*******************************************************
  * TAB INFORME — repuestos en depósito, para el mail de fin de día
