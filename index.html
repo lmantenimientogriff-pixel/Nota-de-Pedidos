@@ -274,6 +274,14 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
 .usr-modal .field select{cursor:pointer}
 @keyframes modalFijo{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
 .modal.modal-fijo{animation:modalFijo .35s ease}
+#tab-articulos>.kpis{grid-template-columns:repeat(8,1fr)}
+@media(max-width:1200px){#tab-articulos>.kpis{grid-template-columns:repeat(4,1fr)}}
+@media(max-width:650px){#tab-articulos>.kpis{grid-template-columns:repeat(2,1fr)}}
+.kpi.stock .val{color:#3F2D86}
+.urole.SOLO_LECTURA{background:#E9E4F7;color:#3F2D86}
+body.modo-lectura .btn-edit{display:none!important}
+.version-aviso{position:fixed;top:0;left:0;right:0;z-index:3000;background:#1D9E75;color:#fff;font-size:13px;font-weight:600;padding:9px 16px;display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.version-aviso button{background:#fff;color:#1D9E75;border:none;border-radius:6px;padding:5px 12px;font-weight:700;cursor:pointer}
 </style>
 </head>
 <body>
@@ -306,7 +314,7 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
   <div class="hleft">
     <span class="logo-badge">GRIFFOULIERE</span>
     <span class="htitle">Notas de Pedido</span>
-    <span class="hsub">Tablero de gestión · mostrando 2026 en adelante · <span title="Versión del tablero">v04.11.26</span></span>
+    <span class="hsub">Tablero de gestión · mostrando 2026 en adelante · <span title="Versión del tablero">v13.11.26</span></span>
   </div>
   <div class="user-bar">
     <span class="uname" id="userNombre">—</span>
@@ -409,7 +417,8 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
       <div class="kpi warn"><div class="lbl">4. En proceso</div><div class="val" id="kProceso">—</div></div>
       <div class="kpi ok"><div class="lbl">5. Cumplidos</div><div class="val" id="kCumplido">—</div></div>
       <div class="kpi ok"><div class="lbl">6. Cumplidos en depósito</div><div class="val" id="kCumplidoDeposito">—</div></div>
-      <div class="kpi danger"><div class="lbl">7. Urgentes pendientes</div><div class="val" id="kUrgente">—</div></div>
+      <div class="kpi stock"><div class="lbl">7. Ingreso a stock</div><div class="val" id="kStock">—</div></div>
+      <div class="kpi danger"><div class="lbl">8. Urgentes pendientes</div><div class="val" id="kUrgente">—</div></div>
     </div>
 
     <div id="tableroContent">
@@ -790,6 +799,7 @@ tr.fila-descuento:hover td:first-child{background:#FBDCDC}
           <option value="GESTION">GESTION</option>
           <option value="ADMINISTRADOR">ADMINISTRADOR</option>
           <option value="PROPIETARIO">PROPIETARIO</option>
+          <option value="SOLO LECTURA">SOLO LECTURA (ve Artículos e Informe)</option>
         </select>
       </div>
     </div>
@@ -1004,7 +1014,9 @@ if (typeof Chart !== 'undefined') {
  * API
  *******************************************************/
 async function apiGet(params) {
-  const url = APPS_SCRIPT_URL + '?' + new URLSearchParams(params).toString();
+  const conUsuario = Object.assign({}, params);
+  if (currentUser && currentUser.usuario && !conUsuario._u) conUsuario._u = currentUser.usuario;
+  const url = APPS_SCRIPT_URL + '?' + new URLSearchParams(conUsuario).toString();
   const res = await fetch(url);
   const data = await res.json();
   if (!data.ok) throw new Error(data.error || 'Error desconocido');
@@ -1066,11 +1078,16 @@ function mostrarApp() {
   document.getElementById('userNombre').textContent = currentUser.nombre;
   const rolEl = document.getElementById('userRol');
   rolEl.textContent = currentUser.rol;
-  rolEl.className = 'urole ' + currentUser.rol;
+  rolEl.className = 'urole ' + String(currentUser.rol || '').replace(/\s+/g, '_');
 
   const esAdmin = currentUser.rol === 'ADMINISTRADOR' || currentUser.rol === 'PROPIETARIO';
   document.getElementById('tab-btn-log').style.display = esAdmin ? 'flex' : 'none';
   document.getElementById('tab-btn-usuarios').style.display = esAdmin ? 'flex' : 'none';
+  // SOLO LECTURA: únicamente Artículos e Informe, sin botones de edición
+  const lectura = esSoloLectura();
+  document.body.classList.toggle('modo-lectura', lectura);
+  TABS_EDICION.forEach(t => { document.getElementById('tab-btn-' + t).style.display = lectura ? 'none' : 'flex'; });
+  if (lectura) goToTab('articulos');
 
   cargarUsuarios(); // todos los roles la necesitan: alimenta el desplegable de Responsable
   cargarTrazabilidad();
@@ -1089,11 +1106,52 @@ function mostrarPlaceholdersFiltros() {
 }
 
 /*******************************************************
+ * AVISO DE VERSIÓN NUEVA
+ * El navegador guarda la página en memoria: después de subir
+ * un index.html nuevo a GitHub, cada PC seguía con la versión
+ * anterior hasta hacer Ctrl+F5. Al abrir el tablero (y cada vez
+ * que se vuelve a la pestaña) se compara la versión propia con
+ * la publicada; si cambió, aparece un aviso para actualizar.
+ *******************************************************/
+function versionPropia() {
+  const el = document.querySelector('[title="Versión del tablero"]');
+  return el ? el.textContent.trim() : '';
+}
+let ultimoChequeoVersion = 0;
+async function chequearVersionNueva() {
+  if (location.protocol === 'file:' || document.getElementById('versionAviso')) return;
+  if (Date.now() - ultimoChequeoVersion < 5 * 60 * 1000) return; // como mucho cada 5 minutos
+  ultimoChequeoVersion = Date.now();
+  try {
+    const res = await fetch(location.pathname + '?v=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) return;
+    const m = (await res.text()).match(/title="Versión del tablero">([^<]+)</);
+    const publicada = m ? m[1].trim() : '';
+    if (!publicada || publicada === versionPropia()) return;
+    const aviso = document.createElement('div');
+    aviso.id = 'versionAviso';
+    aviso.className = 'version-aviso';
+    aviso.innerHTML = '<i class="ti ti-refresh"></i> Hay una versión nueva del tablero (' + escapeHtml(publicada) +
+      '). Si estás editando algo, guardalo primero. <button type="button">Actualizar ahora</button>';
+    aviso.querySelector('button').addEventListener('click', () => {
+      const u = new URL(location.href); u.searchParams.set('v', Date.now()); location.replace(u.toString());
+    });
+    document.body.appendChild(aviso);
+  } catch (e) { /* sin conexión: se vuelve a intentar más tarde */ }
+}
+chequearVersionNueva();
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') chequearVersionNueva(); });
+
+/*******************************************************
  * TABS
  *******************************************************/
+const TABS_EDICION = ['graficos', 'kpi', 'trazabilidad', 'matafuegos', 'manguerotes', 'pernos'];
+function esSoloLectura() { return !!currentUser && currentUser.rol === 'SOLO LECTURA'; }
+
 function goToTab(id) {
   const esAdmin = currentUser && (currentUser.rol === 'ADMINISTRADOR' || currentUser.rol === 'PROPIETARIO');
   if ((id === 'log' || id === 'usuarios') && !esAdmin) return;
+  if (esSoloLectura() && id !== 'articulos' && id !== 'informe') return;
 
   vistaActual = id;
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -1408,6 +1466,7 @@ function renderTablero(filtrados) {
   document.getElementById('kProceso').textContent = filtrados.filter(p => p.estado === 'EN PROCESO').length;
   document.getElementById('kCumplido').textContent = filtrados.filter(p => p.estado === 'CUMPLIDO').length;
   document.getElementById('kCumplidoDeposito').textContent = filtrados.filter(p => p.estado === 'CUMPLIDO EN DEPOSITO').length;
+  document.getElementById('kStock').textContent = filtrados.filter(p => p.estado === 'INGRESO A STOCK').length;
   document.getElementById('kUrgente').textContent = filtrados.filter(esUrgentePendiente).length;
 
   const cont = document.getElementById('tableroContent');
@@ -1798,7 +1857,7 @@ function renderGraficos(filtrados) {
 // aparte para no perderlo silenciosamente.
 function poblarSelectResponsable(valorActual) {
   const sel = document.getElementById('mResponsable');
-  const nombres = [...new Set(usuariosCache.map(u => u.nombre).filter(Boolean))].sort();
+  const nombres = [...new Set(usuariosCache.filter(u => u.rol !== 'SOLO LECTURA').map(u => u.nombre).filter(Boolean))].sort();
 
   let html = '<option value="">— Sin asignar —</option>';
   nombres.forEach(n => { html += `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`; });
@@ -1810,35 +1869,72 @@ function poblarSelectResponsable(valorActual) {
 }
 
 /*******************************************************
- * OTROS ARTÍCULOS DE LA NP QUE SALEN CON LA MISMA TRANSFERENCIA
- * Se tildan los que corresponden; a esos se les carga CUMPLIDO,
- * transferencia, responsable y fecha (y la OC si les faltaba).
+ * OTROS ARTÍCULOS DE LA NP
+ * Al elegir un estado en Gestionar, aparecen los demás artículos
+ * de la misma NP para tildar los que pasan al mismo estado.
+ * Qué se copia a los tildados depende del estado (ver NP_REGLAS).
+ * Se permite volver un artículo a un estado anterior (corrección).
+ * Con CUMPLIDO: transferencia + responsable + fecha (+ OC), igual
+ * que antes; los de trazabilidad se cierran desde su Gestionar.
  *******************************************************/
-let npSeleccion = {}; // { fila: { tildado: bool, oc: '' } } — se conserva mientras se edita el modal
+let npSeleccion = {}; // { fila: { tildado: bool, oc: '', na: bool } } — se conserva mientras se edita el modal
 const vacioTxt = (v) => !String(v == null ? '' : v).trim();
+const ESTADOS_CIERRE = ['CUMPLIDO EN DEPOSITO', 'INGRESO A STOCK', 'CUMPLIDO']; // piden OC (o NA)
+const fechaDdMm = (iso) => iso ? iso.split('-').reverse().join('/') : '';
+
+// Texto de qué recibe cada tildado, según el estado elegido
+function npQueSeCopia(estado) {
+  const resp = document.getElementById('mResponsable').value;
+  const fecha = document.getElementById('mFechaCumplimiento').value;
+  const pim = document.getElementById('mPim').value.trim(), oc = document.getElementById('mOrdenCompra').value.trim();
+  const b = (t) => '<strong>' + escapeHtml(t) + '</strong>';
+  const R = 'responsable ' + b(resp || '(sin responsable)');
+  switch (estado) {
+    case 'CUMPLIDO': return 'Se cierran como CUMPLIDO con ' + R + ' y fecha ' + b(fecha ? fechaDdMm(fecha) : '(cargala arriba)') + '.';
+    case 'CUMPLIDO EN DEPOSITO': return 'Pasan a CUMPLIDO EN DEPÓSITO con ' + R + ' y fecha de llegada ' + b(fecha ? fechaDdMm(fecha) : '(cargala arriba)') + ' (los que ya tienen fecha, la conservan).';
+    case 'INGRESO A STOCK': return 'Pasan a INGRESO A STOCK con ' + R + '. La fecha de ingreso es la de hoy.';
+    case 'EN PROCESO': return 'Pasan a EN PROCESO con ' + R + ', PIM/SC ' + b(pim || '(cargalo arriba)') + ' y OC ' + b(oc || '(cargala arriba)') + ' (a los que ya tienen PIM/SC u OC propios no se les cambia).';
+    case 'RECHAZADO': return 'Pasan a RECHAZADO con ' + R + (vacioTxt(document.getElementById('mObsDeposito').value) ? '.' : ' y las Observaciones de depósito de arriba.');
+    default: return 'Pasan a ' + escapeHtml(estado) + ' con ' + R + '.';
+  }
+}
 
 function lineasHermanas(p) {
   return pedidosCache.filter(x => String(x.np) === String(p.np) && x.fila !== p.fila).sort((a, b) => a.fila - b.fila);
 }
 
-// Situación de cada artículo hermano: { habilitado, texto, clase, necesitaOc, yaCumplida }
-function situacionHermana(x, transferencia) {
+// Situación de cada artículo hermano para el estado elegido:
+// { habilitado, texto, clase, necesitaOc, permiteNA, yaCumplida }
+function situacionHermana(x, transferencia, estado) {
+  estado = estado || document.getElementById('mEstado').value;
   const t = String(x.transferencia || '').trim();
-  if (x.estado === 'RECHAZADO') return { habilitado: false, texto: 'Rechazada', clase: 'motivo' };
-  if (t) {
-    if (x.estado === 'CUMPLIDO' && t === transferencia) return { habilitado: false, yaCumplida: true, texto: 'Ya cumplida con la transferencia ' + t, clase: 'ok' };
-    return { habilitado: false, texto: 'Ya tiene transferencia ' + t, clase: 'motivo' };
+  if (estado === 'CUMPLIDO') {
+    if (x.estado === 'RECHAZADO') return { habilitado: false, texto: 'Rechazada', clase: 'motivo' };
+    if (t) {
+      if (x.estado === 'CUMPLIDO' && t === transferencia) return { habilitado: false, yaCumplida: true, texto: 'Ya cumplida con la transferencia ' + t, clase: 'ok' };
+      return { habilitado: false, texto: 'Ya tiene transferencia ' + t, clase: 'motivo' };
+    }
+    if (x.categoriaTrazabilidad) return { habilitado: false, texto: 'Requiere trazabilidad: cerrar desde su Gestionar', clase: 'motivo' };
+  } else if ((x.estado || '') === estado) {
+    return { habilitado: false, yaCumplida: true, texto: 'Ya está en ' + estado, clase: 'ok' };
   }
-  if (x.categoriaTrazabilidad) return { habilitado: false, texto: 'Requiere trazabilidad: cerrar desde su Gestionar', clase: 'motivo' };
   const s = { habilitado: true, texto: '', clase: 'sub' };
-  if (vacioTxt(x.ordenCompra)) { s.necesitaOc = true; s.permiteNA = vacioTxt(x.pim); } // con PIM/SC, NA no vale
-  if ((x.estado === 'CUMPLIDO EN DEPOSITO' || x.estado === 'INGRESO A STOCK') && x.fechaCumplimientoISO) s.texto = 'Conserva su fecha ' + x.fechaCumplimientoISO.split('-').reverse().join('/');
+  const pimPropio = !vacioTxt(x.pim);
+  if (ESTADOS_CIERRE.includes(estado) && vacioTxt(x.ordenCompra)) { s.necesitaOc = true; s.permiteNA = !pimPropio; } // con PIM/SC, NA no vale
+  if (estado === 'EN PROCESO' && pimPropio && vacioTxt(x.ordenCompra)) { s.necesitaOc = true; s.permiteNA = false; }
+  const fx = fechaDdMm(x.fechaCumplimientoISO);
+  if (estado === 'CUMPLIDO' && (x.estado === 'CUMPLIDO EN DEPOSITO' || x.estado === 'INGRESO A STOCK') && fx) s.texto = 'Conserva su fecha ' + fx;
+  if ((estado === 'CUMPLIDO EN DEPOSITO' || estado === 'INGRESO A STOCK') && fx) s.texto = 'Conserva su fecha de llegada ' + fx;
+  if (estado === 'EN PROCESO' && pimPropio && String(x.pim).trim() !== document.getElementById('mPim').value.trim()) s.texto = 'Conserva su PIM/SC ' + x.pim;
   return s;
 }
 
 function npPuedeMostrarse() {
-  return filaEnEdicion && document.getElementById('mEstado').value === 'CUMPLIDO' &&
-    !vacioTxt(document.getElementById('mTransferencia').value) && lineasHermanas(filaEnEdicion).length > 0;
+  if (!filaEnEdicion || esSoloLectura()) return false;
+  const estado = document.getElementById('mEstado').value;
+  if (!estado) return false;
+  if (estado === 'CUMPLIDO' && vacioTxt(document.getElementById('mTransferencia').value)) return false;
+  return lineasHermanas(filaEnEdicion).length > 0;
 }
 
 function renderHermanas() {
@@ -1846,15 +1942,15 @@ function renderHermanas() {
   if (!npPuedeMostrarse()) { caja.style.display = 'none'; return; }
   caja.style.display = 'block';
   const p = filaEnEdicion;
+  const estado = document.getElementById('mEstado').value;
   const transf = document.getElementById('mTransferencia').value.trim();
-  const fecha = document.getElementById('mFechaCumplimiento').value;
-  const resp = document.getElementById('mResponsable').value;
-  document.getElementById('npTitulo').textContent = 'Otros artículos de la NP ' + p.np + ' que salen con la transferencia ' + transf;
-  document.getElementById('npSub').innerHTML = 'Tildá los que corresponden. Se cierran como CUMPLIDO con responsable <strong>' +
-    escapeHtml(resp || '(sin responsable)') + '</strong> y fecha <strong>' + (fecha ? fecha.split('-').reverse().join('/') : '(cargala arriba)') + '</strong>.';
+  document.getElementById('npTitulo').textContent = estado === 'CUMPLIDO'
+    ? 'Otros artículos de la NP ' + p.np + ' que salen con la transferencia ' + transf
+    : 'Otros artículos de la NP ' + p.np + ' que también pasan a ' + estado;
+  document.getElementById('npSub').innerHTML = 'Tildá los que corresponden. ' + npQueSeCopia(estado);
 
   document.getElementById('npLista').innerHTML = lineasHermanas(p).map(x => {
-    const s = situacionHermana(x, transf);
+    const s = situacionHermana(x, transf, estado);
     const sel = npSeleccion[x.fila] || (npSeleccion[x.fila] = { tildado: false, oc: '', na: false });
     if (!s.habilitado) sel.tildado = false;
     const ocFaltante = s.necesitaOc && vacioTxt(sel.oc) && !sel.na;
@@ -1877,20 +1973,23 @@ function renderHermanas() {
 
 function seleccionNp() {
   if (!npPuedeMostrarse()) return [];
+  const estado = document.getElementById('mEstado').value;
   const transf = document.getElementById('mTransferencia').value.trim();
   return lineasHermanas(filaEnEdicion).filter(x => {
-    const s = situacionHermana(x, transf), sel = npSeleccion[x.fila];
+    const s = situacionHermana(x, transf, estado), sel = npSeleccion[x.fila];
     return s.habilitado && sel && sel.tildado && !(s.necesitaOc && vacioTxt(sel.oc) && !sel.na);
   });
 }
 
 function actualizarResumenNp() {
   const elegidos = seleccionNp();
+  const estado = document.getElementById('mEstado').value;
   const transf = document.getElementById('mTransferencia').value.trim();
-  const conservan = elegidos.filter(x => (x.estado === 'CUMPLIDO EN DEPOSITO' || x.estado === 'INGRESO A STOCK') && x.fechaCumplimientoISO).length;
-  const conOc = elegidos.filter(x => situacionHermana(x, transf).necesitaOc).length;
+  const conservan = elegidos.filter(x => /Conserva su fecha/.test(situacionHermana(x, transf, estado).texto)).length;
+  const conOc = elegidos.filter(x => situacionHermana(x, transf, estado).necesitaOc).length;
+  const verbo = estado === 'CUMPLIDO' ? 'Se van a cerrar ' : 'Pasan a ' + estado + ' ';
   document.getElementById('npResumen').textContent = !elegidos.length ? 'Ninguno tildado' :
-    'Se van a cerrar ' + elegidos.length + (elegidos.length === 1 ? ' artículo más' : ' artículos más') +
+    verbo + elegidos.length + (elegidos.length === 1 ? ' artículo más' : ' artículos más') +
     (conservan ? ' · ' + conservan + ' conserva' + (conservan > 1 ? 'n' : '') + ' su fecha' : '') +
     (conOc ? ' · ' + conOc + ' con OC nueva' : '');
 }
@@ -1925,33 +2024,38 @@ document.getElementById('npTildarTodos').addEventListener('click', () => {
   });
   actualizarResumenNp();
 });
-['mTransferencia', 'mFechaCumplimiento'].forEach(id => document.getElementById(id).addEventListener('input', renderHermanas));
+['mTransferencia', 'mFechaCumplimiento', 'mPim', 'mOrdenCompra', 'mObsDeposito'].forEach(id => document.getElementById(id).addEventListener('input', renderHermanas));
 ['mEstado', 'mResponsable'].forEach(id => document.getElementById(id).addEventListener('change', renderHermanas));
 
 // Se llama después de guardar la línea principal. Devuelve el texto para el aviso final.
 async function cerrarHermanasTildadas(p, elegidos, datos) {
   if (!elegidos.length) return '';
+  const estado = datos.estado;
   const transf = datos.transferencia;
   const items = elegidos.map(x => ({ fila: x.fila,
-    oc: situacionHermana(x, transf).necesitaOc ? (npSeleccion[x.fila].na ? 'NA' : (npSeleccion[x.fila].oc || '').trim()) : '' }));
+    oc: situacionHermana(x, transf, estado).necesitaOc ? (npSeleccion[x.fila].na ? 'NA' : (npSeleccion[x.fila].oc || '').trim()) : '' }));
   try {
-    const r = await apiGet({ action: 'cerrarArticulosNota', np: p.np, filaOrigen: p.fila, transferencia: transf,
-      fechaCumplimiento: datos.fecha, responsable: datos.responsable, items: JSON.stringify(items),
-      usuario: currentUser.usuario, nombreUsuario: currentUser.nombre });
+    const comunes = { np: p.np, filaOrigen: p.fila, fechaCumplimiento: datos.fecha, responsable: datos.responsable,
+      items: JSON.stringify(items), usuario: currentUser.usuario, nombreUsuario: currentUser.nombre };
+    const r = estado === 'CUMPLIDO'
+      ? await apiGet(Object.assign({ action: 'cerrarArticulosNota', transferencia: transf }, comunes))
+      : await apiGet(Object.assign({ action: 'cambiarEstadoArticulosNota', estado: estado, pim: datos.pim,
+          ordenCompra: datos.ordenCompra, obsDeposito: datos.obsDeposito }, comunes));
     (r.pedidos || []).forEach(nuevo => {
       nuevo.deposito = clasificarDeposito(nuevo.centroCosto);
       const i = pedidosCache.findIndex(x => x.fila === nuevo.fila);
       if (i >= 0) pedidosCache[i] = nuevo;
     });
     let msg = ' y ' + r.cerrados.length + (r.cerrados.length === 1 ? ' artículo más' : ' artículos más') + ' de la NP';
-    if (r.omitidos.length) msg += '. No se cerraron: ' + r.omitidos.join('; ');
+    if (r.omitidos.length) msg += '. No se ' + (estado === 'CUMPLIDO' ? 'cerraron' : 'cambiaron') + ': ' + r.omitidos.join('; ');
     return msg;
   } catch (err) {
-    return '. Los otros artículos NO se cerraron: ' + err.message;
+    return '. Los otros artículos NO se ' + (estado === 'CUMPLIDO' ? 'cerraron' : 'cambiaron') + ': ' + err.message;
   }
 }
 
 function abrirModal(fila) {
+  if (esSoloLectura()) return;
   const p = pedidosCache.find(x => x.fila === fila);
   if (!p) return;
   filaEnEdicion = p;
@@ -3143,6 +3247,11 @@ async function guardarEdicion() {
     document.getElementById('mPim').focus();
     return;
   }
+  if (estado === 'CUMPLIDO EN DEPOSITO' && !document.getElementById('mFechaCumplimiento').value) {
+    mostrarToast('Para poner CUMPLIDO EN DEPÓSITO, cargá la Fecha de cumplimiento (día en que llegó a depósito)', 'err');
+    document.getElementById('mFechaCumplimiento').focus();
+    return;
+  }
   if (estado === 'CUMPLIDO' && !transferencia) {
     mostrarToast('Para poner el estado CUMPLIDO, primero cargá el N° de Transferencia', 'err');
     document.getElementById('mTransferencia').focus();
@@ -3174,17 +3283,21 @@ async function guardarEdicion() {
 
   // Otros artículos de la NP tildados para cerrar con la misma transferencia
   const npElegidos = seleccionNp();
-  const npDatos = { transferencia: transferencia, fecha: document.getElementById('mFechaCumplimiento').value,
-    responsable: document.getElementById('mResponsable').value };
+  const npDatos = { estado: estado, transferencia: transferencia, fecha: document.getElementById('mFechaCumplimiento').value,
+    responsable: document.getElementById('mResponsable').value, pim: pim, ordenCompra: ordenCompraInput.value.trim(),
+    obsDeposito: document.getElementById('mObsDeposito').value.trim() };
   if (npElegidos.length) {
-    if (!npDatos.fecha) {
+    if (estado === 'CUMPLIDO' && !npDatos.fecha) {
       mostrarToast('Para cerrar los otros artículos tildados, cargá la Fecha de cumplimiento', 'err');
       document.getElementById('mFechaCumplimiento').focus();
       return;
     }
-    if (!confirm('Además de esta línea, se van a cerrar como CUMPLIDO ' + npElegidos.length +
-        (npElegidos.length === 1 ? ' artículo más' : ' artículos más') + ' de la NP ' + filaEnEdicion.np +
-        ' con la transferencia ' + transferencia + ':\n\n' + npElegidos.map(x => '• ' + x.articulo).join('\n') +
+    const detalle = estado === 'CUMPLIDO'
+      ? 'se van a cerrar como CUMPLIDO ' + npElegidos.length + (npElegidos.length === 1 ? ' artículo más' : ' artículos más') +
+        ' de la NP ' + filaEnEdicion.np + ' con la transferencia ' + transferencia
+      : 'van a pasar a ' + estado + ' ' + npElegidos.length + (npElegidos.length === 1 ? ' artículo más' : ' artículos más') +
+        ' de la NP ' + filaEnEdicion.np;
+    if (!confirm('Además de esta línea, ' + detalle + ':\n\n' + npElegidos.map(x => '• ' + x.articulo).join('\n') +
         '\n\nAceptar = confirmar · Cancelar = volver')) return;
   }
 
