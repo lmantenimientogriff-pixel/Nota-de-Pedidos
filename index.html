@@ -314,7 +314,7 @@ body.modo-lectura .btn-edit{display:none!important}
   <div class="hleft">
     <span class="logo-badge">GRIFFOULIERE</span>
     <span class="htitle">Notas de Pedido</span>
-    <span class="hsub">Tablero de gestión · mostrando 2026 en adelante · <span title="Versión del tablero">v13.11.26</span></span>
+    <span class="hsub">Tablero de gestión · mostrando 2026 en adelante · <span title="Versión del tablero">v13.11.26-b</span></span>
   </div>
   <div class="user-bar">
     <span class="uname" id="userNombre">—</span>
@@ -1892,7 +1892,7 @@ function npQueSeCopia(estado) {
   switch (estado) {
     case 'CUMPLIDO': return 'Se cierran como CUMPLIDO con ' + R + ' y fecha ' + b(fecha ? fechaDdMm(fecha) : '(cargala arriba)') + '.';
     case 'CUMPLIDO EN DEPOSITO': return 'Pasan a CUMPLIDO EN DEPÓSITO con ' + R + ' y fecha de llegada ' + b(fecha ? fechaDdMm(fecha) : '(cargala arriba)') + ' (los que ya tienen fecha, la conservan).';
-    case 'INGRESO A STOCK': return 'Pasan a INGRESO A STOCK con ' + R + '. La fecha de ingreso es la de hoy.';
+    case 'INGRESO A STOCK': return 'Pasan a INGRESO A STOCK con ' + R + '. Conservan su fecha de llegada a depósito (los que no tienen, toman ' + b(fecha ? fechaDdMm(fecha) : '(cargala arriba)') + '); el día de hoy queda como fecha de ingreso a stock.';
     case 'EN PROCESO': return 'Pasan a EN PROCESO con ' + R + ', PIM/SC ' + b(pim || '(cargalo arriba)') + ' y OC ' + b(oc || '(cargala arriba)') + ' (a los que ya tienen PIM/SC u OC propios no se les cambia).';
     case 'RECHAZADO': return 'Pasan a RECHAZADO con ' + R + (vacioTxt(document.getElementById('mObsDeposito').value) ? '.' : ' y las Observaciones de depósito de arriba.');
     default: return 'Pasan a ' + escapeHtml(estado) + ' con ' + R + '.';
@@ -2095,7 +2095,9 @@ function actualizarBloqueoFechaCumplimiento() {
   const input = document.getElementById('mFechaCumplimiento');
   const hint = document.getElementById('hintFechaCumplimiento');
 
-  const bloquear = (estadoOriginal === 'CUMPLIDO EN DEPOSITO' || estadoOriginal === 'INGRESO A STOCK') && estadoNuevo === 'CUMPLIDO';
+  // Ya llegó a depósito: al pasar a stock o a cumplido se conserva la fecha de llegada
+  const bloquear = (estadoOriginal === 'CUMPLIDO EN DEPOSITO' || estadoOriginal === 'INGRESO A STOCK') &&
+    (estadoNuevo === 'CUMPLIDO' || estadoNuevo === 'INGRESO A STOCK') && !!filaEnEdicion.fechaCumplimientoISO;
 
   input.disabled = bloquear;
   if (bloquear) {
@@ -3247,8 +3249,8 @@ async function guardarEdicion() {
     document.getElementById('mPim').focus();
     return;
   }
-  if (estado === 'CUMPLIDO EN DEPOSITO' && !document.getElementById('mFechaCumplimiento').value) {
-    mostrarToast('Para poner CUMPLIDO EN DEPÓSITO, cargá la Fecha de cumplimiento (día en que llegó a depósito)', 'err');
+  if ((estado === 'CUMPLIDO EN DEPOSITO' || estado === 'INGRESO A STOCK') && !document.getElementById('mFechaCumplimiento').value) {
+    mostrarToast('Para poner ' + (estado === 'INGRESO A STOCK' ? 'INGRESO A STOCK' : 'CUMPLIDO EN DEPÓSITO') + ', cargá la Fecha de cumplimiento (día en que llegó a depósito)', 'err');
     document.getElementById('mFechaCumplimiento').focus();
     return;
   }
